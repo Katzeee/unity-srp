@@ -8,7 +8,7 @@ public partial class CameraRenderer
     private CullingResults m_cullingRes;
     private CommandBuffer m_commandBuffer = new ();
 
-    public void Render(ScriptableRenderContext context, Camera camera)
+    public void Render(ScriptableRenderContext context, Camera camera, bool useDynamicBatching, bool useGpuInstancing)
     {
         m_context = context;
         m_camera = camera;
@@ -17,7 +17,7 @@ public partial class CameraRenderer
         PrepareForSceneWindow();
         Cull();
         Setup();
-        DrawVisibleGeometry();
+        DrawVisibleGeometry(useDynamicBatching, useGpuInstancing);
         DrawUnsupportedShader();
         DrawGizmos();
         Submit();
@@ -38,7 +38,7 @@ public partial class CameraRenderer
     {
         m_context.SetupCameraProperties(m_camera);
         CameraClearFlags clearFlags = m_camera.clearFlags;
-        m_commandBuffer.ClearRenderTarget(clearFlags <= CameraClearFlags.Depth, clearFlags == CameraClearFlags.Color, 
+        m_commandBuffer.ClearRenderTarget(clearFlags <= CameraClearFlags.Depth, clearFlags <= CameraClearFlags.Color, 
             clearFlags == CameraClearFlags.Color ? m_camera.backgroundColor.linear : Color.clear);
         m_commandBuffer.BeginSample(SampleName);
         ExecteBuffer();
@@ -57,13 +57,17 @@ public partial class CameraRenderer
         m_context.Submit();
     }
 
-    private void DrawVisibleGeometry()
+    private void DrawVisibleGeometry(bool useDynamicBatching, bool useGpuInstacing)
     {
         var sortingSettings = new SortingSettings(m_camera)
         {
             criteria = SortingCriteria.CommonOpaque
         };
-        var drawingSettings = new DrawingSettings(new ShaderTagId("SRPDefaultUnlit"), sortingSettings);
+        var drawingSettings = new DrawingSettings(new ShaderTagId("SRPDefaultUnlit"), sortingSettings)
+        {
+            enableInstancing = useGpuInstacing,
+            enableDynamicBatching = useDynamicBatching
+        };
         var filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
         // draw opaque
         m_context.DrawRenderers(m_cullingRes, ref drawingSettings, ref filteringSettings);
