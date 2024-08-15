@@ -2,11 +2,13 @@ Shader "CustomShaders/Unlit"
 {
     Properties
     {
-        _BaseColor ("Color", Color) = (1.0, 1.0, 1.0, 1.0)
-        _MainTex ("Texture", 2D) = "white" {}
+        _BaseColor("Color", Color) = (1.0, 1.0, 1.0, 1.0)
+        _MainTex("Texture", 2D) = "white" {}
         [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlend("Src Blend", Float) = 1
         [Enum(UnityEngine.Rendering.BlendMode)] _DstBlend("Dst Blend", Float) = 0
         [Enum(Off, 0, On, 1)] _ZWrite("Z Write", Float) = 1
+        _CutOff("Alpha Cutoff", Range(0.0, 1.0)) = 0.8
+        [Toggle(_CLIPPING)] _Clipping("Alpha Clipping", Float) = 0
     }
     SubShader
     {
@@ -18,6 +20,7 @@ Shader "CustomShaders/Unlit"
             Blend[_SrcBlend][_DstBlend]
             ZWrite[_ZWrite]
             CGPROGRAM
+            #pragma shader_feature _CLIPPING
             #pragma multi_compile_instancing
             #pragma vertex vert
             #pragma fragment frag
@@ -43,6 +46,7 @@ Shader "CustomShaders/Unlit"
             UNITY_INSTANCING_BUFFER_START(UnityPerMaterial)
                 UNITY_DEFINE_INSTANCED_PROP(float4, _MainTex_ST)
                 UNITY_DEFINE_INSTANCED_PROP(float4, _BaseColor)
+                UNITY_DEFINE_INSTANCED_PROP(float, _CutOff)
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
 
             v2f vert (appdata v)
@@ -60,7 +64,11 @@ Shader "CustomShaders/Unlit"
             {
                 UNITY_SETUP_INSTANCE_ID(i);
                 fixed4 col = tex2D(_MainTex, i.uv);
-                return col * UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _BaseColor);
+                col *= UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _BaseColor);
+#if defined(_CLIPPING)
+                clip(col.a - UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _CutOff));
+#endif
+                return col;
             }
             ENDCG
         }
