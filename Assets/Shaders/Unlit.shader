@@ -4,6 +4,9 @@ Shader "CustomShaders/Unlit"
     {
         _BaseColor ("Color", Color) = (1.0, 1.0, 1.0, 1.0)
         _MainTex ("Texture", 2D) = "white" {}
+        [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlend("Src Blend", Float) = 1
+        [Enum(UnityEngine.Rendering.BlendMode)] _DstBlend("Dst Blend", Float) = 0
+        [Enum(Off, 0, On, 1)] _ZWrite("Z Write", Float) = 1
     }
     SubShader
     {
@@ -12,6 +15,8 @@ Shader "CustomShaders/Unlit"
 
         Pass
         {
+            Blend[_SrcBlend][_DstBlend]
+            ZWrite[_ZWrite]
             CGPROGRAM
             #pragma multi_compile_instancing
             #pragma vertex vert
@@ -33,9 +38,7 @@ Shader "CustomShaders/Unlit"
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
-            CBUFFER_START(UnityPerMaterial)
-                sampler2D _MainTex;
-            CBUFFER_END
+            sampler2D _MainTex;
 
             UNITY_INSTANCING_BUFFER_START(UnityPerMaterial)
                 UNITY_DEFINE_INSTANCED_PROP(float4, _MainTex_ST)
