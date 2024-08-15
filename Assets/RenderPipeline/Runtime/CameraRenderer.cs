@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public class CameraRenderer
+public partial class CameraRenderer
 {
     private ScriptableRenderContext m_context;
     private Camera m_camera;
@@ -17,6 +17,8 @@ public class CameraRenderer
         Cull();
         Setup();
         DrawVisibleGeometry();
+        DrawUnsupportedShader();
+        DrawGizmos();
         Submit();
     }
 
