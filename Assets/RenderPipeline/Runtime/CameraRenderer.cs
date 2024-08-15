@@ -6,14 +6,13 @@ public partial class CameraRenderer
     private ScriptableRenderContext m_context;
     private Camera m_camera;
     private CullingResults m_cullingRes;
-    private const string c_bufferName = "Render Camera";
-    private CommandBuffer m_commandBuffer = new CommandBuffer{ name = c_bufferName };
+    private CommandBuffer m_commandBuffer = new ();
 
     public void Render(ScriptableRenderContext context, Camera camera)
     {
         m_context = context;
         m_camera = camera;
-        
+        PrepareCommandBuffer();
         
         PrepareForSceneWindow();
         Cull();
@@ -38,8 +37,10 @@ public partial class CameraRenderer
     private void Setup()
     {
         m_context.SetupCameraProperties(m_camera);
-        m_commandBuffer.ClearRenderTarget(true, true, Color.clear);
-        m_commandBuffer.BeginSample(c_bufferName);
+        CameraClearFlags clearFlags = m_camera.clearFlags;
+        m_commandBuffer.ClearRenderTarget(clearFlags <= CameraClearFlags.Depth, clearFlags == CameraClearFlags.Color, 
+            clearFlags == CameraClearFlags.Color ? m_camera.backgroundColor.linear : Color.clear);
+        m_commandBuffer.BeginSample(SampleName);
         ExecteBuffer();
     }
 
@@ -51,7 +52,7 @@ public partial class CameraRenderer
 
     private void Submit()
     {
-        m_commandBuffer.EndSample(c_bufferName);
+        m_commandBuffer.EndSample(SampleName);
         ExecteBuffer();
         m_context.Submit();
     }

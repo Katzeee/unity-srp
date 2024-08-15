@@ -1,5 +1,6 @@
 ﻿using UnityEditor;
 using UnityEngine;
+using UnityEngine.Profiling;
 using UnityEngine.Rendering;
 
 public partial class CameraRenderer
@@ -7,8 +8,10 @@ public partial class CameraRenderer
     private partial void DrawUnsupportedShader();
     private partial void DrawGizmos();
     private partial void PrepareForSceneWindow();
+    private partial void PrepareCommandBuffer();
     
 #if UNITY_EDITOR
+    private string SampleName { get; set; }
     private static readonly string[] s_unsupportedShaderIds = new string[] 
     {
         "Always",
@@ -51,5 +54,15 @@ public partial class CameraRenderer
             ScriptableRenderContext.EmitWorldGeometryForSceneView(m_camera);
         }
     }
+
+    private partial void PrepareCommandBuffer()
+    {
+        Profiler.BeginSample("Editor Only");
+        m_commandBuffer.name = SampleName = m_camera.name;
+        Profiler.EndSample();
+    }
+#else
+    const string SampleName = "Camera Renderer";
 #endif
+    
 }
