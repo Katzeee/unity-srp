@@ -13,7 +13,9 @@ public partial class CameraRenderer
     {
         m_context = context;
         m_camera = camera;
-
+        
+        
+        PrepareForSceneWindow();
         Cull();
         Setup();
         DrawVisibleGeometry();

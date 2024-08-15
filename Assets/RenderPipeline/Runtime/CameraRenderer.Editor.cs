@@ -6,6 +6,7 @@ public partial class CameraRenderer
 {
     private partial void DrawUnsupportedShader();
     private partial void DrawGizmos();
+    private partial void PrepareForSceneWindow();
     
 #if UNITY_EDITOR
     private static readonly string[] s_unsupportedShaderIds = new string[] 
@@ -39,6 +40,15 @@ public partial class CameraRenderer
         {
             m_context.DrawGizmos(m_camera, GizmoSubset.PreImageEffects);
             m_context.DrawGizmos(m_camera, GizmoSubset.PostImageEffects);
+        }
+    }
+
+    private partial void PrepareForSceneWindow()
+    {
+        if (m_camera.cameraType == CameraType.SceneView)
+        {
+            // draw ui in scene window
+            ScriptableRenderContext.EmitWorldGeometryForSceneView(m_camera);
         }
     }
 #endif
