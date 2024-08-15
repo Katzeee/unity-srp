@@ -59,8 +59,15 @@ public class CameraRenderer
             criteria = SortingCriteria.CommonOpaque
         };
         var drawingSettings = new DrawingSettings(new ShaderTagId("SRPDefaultUnlit"), sortingSettings);
-        var filteringSettings = new FilteringSettings(RenderQueueRange.all);
+        var filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
+        // draw opaque
         m_context.DrawRenderers(m_cullingRes, ref drawingSettings, ref filteringSettings);
+        // draw skybox
         m_context.DrawSkybox(m_camera);
+        // draw transparent
+        sortingSettings.criteria = SortingCriteria.CommonTransparent;
+        drawingSettings.sortingSettings = sortingSettings;
+        filteringSettings.renderQueueRange = RenderQueueRange.transparent;
+        m_context.DrawRenderers(m_cullingRes, ref drawingSettings, ref filteringSettings);
     }
 }
