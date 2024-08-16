@@ -1,8 +1,6 @@
 ﻿#ifndef __CUSTOM_BRDF
 #define __CUSTOM_BRDF
 
-#define _PI 3.1415926f
-
 // F part
 fixed3 fresnel_schlick(fixed cos_theta, fixed3 F0)
 {
@@ -16,7 +14,7 @@ fixed distribution_ggx(fixed NoH, fixed roughness)
     fixed a_square = a * a;
     NoH = saturate(NoH);
     fixed denom = NoH * NoH * (a_square - 1.0) + 1.00001;
-    denom = _PI * (denom * denom);
+    denom = UNITY_PI * (denom * denom);
     return a_square / denom;
 }
 

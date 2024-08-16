@@ -6,7 +6,6 @@ Shader "CustomShaders/Lit"
         _MainTex ("Texture", 2D) = "white" {}
         _Metallic("Metallic", Float) = 0.5
         _Roughness("Roughness", Float) = 0.5
-        _SpecularPower("Specular Power", Float) = 32
     }
     SubShader
     {
@@ -15,6 +14,7 @@ Shader "CustomShaders/Lit"
         Pass
         {
             CGPROGRAM
+            #pragma multi_compile_instancing
             #pragma vertex vert
             #pragma fragment frag
 
@@ -37,14 +37,13 @@ Shader "CustomShaders/Lit"
                 UNITY_DEFINE_INSTANCED_PROP(float4, _MainTex_ST)
                 UNITY_DEFINE_INSTANCED_PROP(float, _Metallic)
                 UNITY_DEFINE_INSTANCED_PROP(float, _Roughness)
-                UNITY_DEFINE_INSTANCED_PROP(float, _SpecularPower)
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
 
             v2f vert (appdata_tan v)
             {
                 v2f o;
-                UNITY_SETUP_INSTANCE_ID(v)
-                UNITY_TRANSFER_INSTANCE_ID(v, o)
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
                 o.pos = UnityObjectToClipPos(v.vertex);
                 o.pos_W = mul(UNITY_MATRIX_M, v.vertex);
                 o.normal = normalize(UnityObjectToWorldNormal(v.normal));
@@ -63,22 +62,25 @@ Shader "CustomShaders/Lit"
                 F0 = lerp(F0, col, UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Metallic));
                 for (int j = 0; j < g_DirectionalLightCount; j++)
                 {
+                    // prepare vectors and dot products
+                    fixed3 N = normalize(i.normal);
                     fixed3 L = normalize(g_DirectionalLightDirs[j]);
-                    fixed NoL = saturate(dot(i.normal, L));
+                    fixed NoL = saturate(dot(N, L));
                     fixed3 V = normalize(_WorldSpaceCameraPos - i.pos_W);
                     fixed3 H = normalize(V + L);
-                    fixed NoH = dot(i.normal, H);
+                    fixed NoH = dot(N, H);
                     fixed HoV = dot(H, V);
-                    fixed NoV = dot(i.normal, V);
+                    fixed NoV = dot(N, V);
 
+                    // calculate pbr lighting
                     fixed3 F = fresnel_schlick(saturate(HoV), F0);
                     fixed Kd = 1.0 - F;
                     Kd *= 1.0 - UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Metallic);
                     fixed3 D = distribution_ggx(NoH, UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Roughness));
-                    fixed3 G = geometry_smith(i.normal, V, L, UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Roughness));
+                    fixed3 G = geometry_smith(N, V, L, UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Roughness));
                     fixed3 nom = D * F * G;
                     fixed denom = 4.0 * saturate(NoV) * saturate(NoL) + 0.001;
-                    diffuse += Kd * g_DirectionalLightColors[j] / _PI * NoL;
+                    diffuse += Kd * g_DirectionalLightColors[j] / UNITY_PI * NoL;
                     specular += nom * g_DirectionalLightColors[j] * NoL / denom;
                 }
                 // fixed4 specular = 0.0;
