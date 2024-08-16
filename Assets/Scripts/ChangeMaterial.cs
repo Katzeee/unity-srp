@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ChangeColor : MonoBehaviour
+public class ChangeMaterial : MonoBehaviour
 {
     public Color baseColor = Color.white;
     private static readonly int s_baseColorId = Shader.PropertyToID("_BaseColor");

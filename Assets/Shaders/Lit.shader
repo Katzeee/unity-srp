@@ -6,6 +6,12 @@ Shader "CustomShaders/Lit"
         _MainTex ("Texture", 2D) = "white" {}
         _Metallic("Metallic", Float) = 0.5
         _Roughness("Roughness", Float) = 0.5
+        [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlend("Src Blend", Float) = 1
+        [Enum(UnityEngine.Rendering.BlendMode)] _DstBlend("Dst Blend", Float) = 0
+        [Enum(Off, 0, On, 1)] _ZWrite("Z Write", Float) = 1
+        _CutOff("Alpha Cutoff", Range(0.0, 1.0)) = 0.8
+        [Toggle(_CLIPPING)] _Clipping("Alpha Clipping", Float) = 0
+        [Toggle(_PRE_MULTIPLE_ALPHA)] _PremulAlpha("Premultiply alpha", Float) = 0
     }
     SubShader
     {
@@ -13,8 +19,12 @@ Shader "CustomShaders/Lit"
 
         Pass
         {
+            Blend[_SrcBlend][_DstBlend]
+            ZWrite[_ZWrite]
             CGPROGRAM
             #pragma multi_compile_instancing
+            #pragma shader_feature _CLIPPING
+            #pragma shader_feature _PRE_MULTIPLE_ALPHA
             #pragma vertex vert
             #pragma fragment frag
 
@@ -38,6 +48,7 @@ Shader "CustomShaders/Lit"
                 UNITY_DEFINE_INSTANCED_PROP(float4, _MainTex_ST)
                 UNITY_DEFINE_INSTANCED_PROP(float, _Metallic)
                 UNITY_DEFINE_INSTANCED_PROP(float, _Roughness)
+                UNITY_DEFINE_INSTANCED_PROP(float, _CutOff)
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
 
             v2f vert (appdata_tan v)
@@ -79,9 +90,16 @@ Shader "CustomShaders/Lit"
                     f.HoV = dot(f.H, f.V);
 
                     // calculate direct light lighting
+#ifdef _PRE_MULTIPLE_ALPHA     
+                    direct_lighting += cook_torrance_brdf(f, s, true) * g_DirectionalLightColors[j];
+#else                    
                     direct_lighting += cook_torrance_brdf(f, s) * g_DirectionalLightColors[j];
+#endif
                     
                 }
+#ifdef _CLIPPING
+                clip(s.albedo.a - UNITY_ACCESS_INSTANCED_PROP(UnityPreMaterial, _CutOff));
+#endif
                 return fixed4(direct_lighting, s.albedo.a);
             }
             ENDCG

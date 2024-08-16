@@ -11,7 +11,7 @@ fixed3 blinn_phong(FragValue f, Surface s)
     return diffuse + specular; 
 }
 
-fixed3 cook_torrance_brdf(FragValue f, Surface s)
+fixed3 cook_torrance_brdf(FragValue f, Surface s, bool pre_mul_alpha = false)
 {
     // specular
     
@@ -28,6 +28,10 @@ fixed3 cook_torrance_brdf(FragValue f, Surface s)
     fixed3 Kd = 1.0 - F;
     Kd *= 1 - s.metallic;
     fixed3 diffuse = Kd * saturate(f.NoL) / UNITY_PI;
+    if (pre_mul_alpha)
+    {
+        diffuse *= s.albedo.a;
+    }
     
     return (diffuse + specular) * s.albedo;
 }
