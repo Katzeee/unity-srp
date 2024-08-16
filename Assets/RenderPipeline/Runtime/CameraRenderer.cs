@@ -7,6 +7,13 @@ public partial class CameraRenderer
     private Camera m_camera;
     private CullingResults m_cullingRes;
     private CommandBuffer m_commandBuffer = new ();
+    private Lighting m_lighting = new ();
+
+    private static string[] s_supportedRenderIds = new[]
+    {
+        "SRPDefaultUnlit",
+        "CustomLit",
+    };
 
     public void Render(ScriptableRenderContext context, Camera camera, bool useDynamicBatching, bool useGpuInstancing)
     {
@@ -17,6 +24,7 @@ public partial class CameraRenderer
         PrepareForSceneWindow();
         Cull();
         Setup();
+        m_lighting.Setup(m_context, m_cullingRes);
         DrawVisibleGeometry(useDynamicBatching, useGpuInstancing);
         DrawUnsupportedShader();
         DrawGizmos();
@@ -41,10 +49,10 @@ public partial class CameraRenderer
         m_commandBuffer.ClearRenderTarget(clearFlags <= CameraClearFlags.Depth, clearFlags <= CameraClearFlags.Color, 
             clearFlags == CameraClearFlags.Color ? m_camera.backgroundColor.linear : Color.clear);
         m_commandBuffer.BeginSample(SampleName);
-        ExecteBuffer();
+        ExecuteBuffer();
     }
 
-    private void ExecteBuffer()
+    private void ExecuteBuffer()
     {
         m_context.ExecuteCommandBuffer(m_commandBuffer);
         m_commandBuffer.Clear();
@@ -53,7 +61,7 @@ public partial class CameraRenderer
     private void Submit()
     {
         m_commandBuffer.EndSample(SampleName);
-        ExecteBuffer();
+        ExecuteBuffer();
         m_context.Submit();
     }
 
@@ -63,11 +71,15 @@ public partial class CameraRenderer
         {
             criteria = SortingCriteria.CommonOpaque
         };
-        var drawingSettings = new DrawingSettings(new ShaderTagId("SRPDefaultUnlit"), sortingSettings)
+        var drawingSettings = new DrawingSettings(new ShaderTagId(s_supportedRenderIds[0]), sortingSettings)
         {
             enableInstancing = useGpuInstacing,
             enableDynamicBatching = useDynamicBatching
         };
+        for (int i = 1; i < s_supportedRenderIds.Length; i++)
+        {
+            drawingSettings.SetShaderPassName(i, new ShaderTagId(s_supportedRenderIds[i]));
+        }
         var filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
         // draw opaque
         m_context.DrawRenderers(m_cullingRes, ref drawingSettings, ref filteringSettings);
