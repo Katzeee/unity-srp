@@ -2,9 +2,10 @@ Shader "CustomShaders/Lit"
 {
     Properties
     {
+        _BaseColor("Base Color", Color) = (1.0, 1.0, 1.0, 1.0)
         _MainTex ("Texture", 2D) = "white" {}
-        _Kd("Kd", Float) = 0.5
-        _Ks("Ks", Float) = 0.3
+        _Metallic("Metallic", Float) = 0.5
+        _Roughness("Roughness", Float) = 0.5
         _SpecularPower("Specular Power", Float) = 32
     }
     SubShader
@@ -19,6 +20,7 @@ Shader "CustomShaders/Lit"
 
             #include "UnityCG.cginc"
             #include "Light.hlsl"
+            #include "BRDF.hlsl"
 
             struct v2f
             {
@@ -30,39 +32,57 @@ Shader "CustomShaders/Lit"
             };
 
             sampler2D _MainTex;
-            float4 _MainTex_ST;
-            float _Kd;
-            float _Ks;
-            float _SpecularPower;
+            UNITY_INSTANCING_BUFFER_START(UnityPerMaterial)
+                UNITY_DEFINE_INSTANCED_PROP(float4, _BaseColor)
+                UNITY_DEFINE_INSTANCED_PROP(float4, _MainTex_ST)
+                UNITY_DEFINE_INSTANCED_PROP(float, _Metallic)
+                UNITY_DEFINE_INSTANCED_PROP(float, _Roughness)
+                UNITY_DEFINE_INSTANCED_PROP(float, _SpecularPower)
+            UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
 
             v2f vert (appdata_tan v)
             {
                 v2f o;
+                UNITY_SETUP_INSTANCE_ID(v)
+                UNITY_TRANSFER_INSTANCE_ID(v, o)
                 o.pos = UnityObjectToClipPos(v.vertex);
                 o.pos_W = mul(UNITY_MATRIX_M, v.vertex);
-                // o.normal = normalize(mul(v.normal, (float3x3)unity_WorldToObject));
                 o.normal = normalize(UnityObjectToWorldNormal(v.normal));
-                o.uv = TRANSFORM_TEX(v.texcoord, _MainTex);
+                float4 cur_tex_ST = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _MainTex_ST);
+                o.uv = TRANSFORM_TEX(v.texcoord, cur_tex);
                 return o;
             }
 
             fixed4 frag (v2f i) : SV_Target
             {
-                fixed4 col = tex2D(_MainTex, i.uv);
-                fixed4 diffuse = fixed4(0, 0, 0, 0);
-                fixed4 specular = fixed4(0, 0, 0, 0);
+                UNITY_SETUP_INSTANCE_ID(i)
+                fixed4 col = tex2D(_MainTex, i.uv) * UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _BaseColor);
+                fixed3 diffuse = 0;
+                fixed3 specular = 0;
+                fixed3 F0 = 0.04f;
+                F0 = lerp(F0, col, UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Metallic));
                 for (int j = 0; j < g_DirectionalLightCount; j++)
                 {
                     fixed3 L = normalize(g_DirectionalLightDirs[j]);
-                    fixed NoL = dot(i.normal, L);
+                    fixed NoL = saturate(dot(i.normal, L));
                     fixed3 V = normalize(_WorldSpaceCameraPos - i.pos_W);
                     fixed3 H = normalize(V + L);
-                    fixed HoN = dot(H, i.normal);
-                    diffuse += fixed4(saturate(NoL).xxx, 1.0) * g_DirectionalLightColors[j];
-                    specular += pow(saturate(HoN), _SpecularPower) * g_DirectionalLightColors[j];
+                    fixed NoH = dot(i.normal, H);
+                    fixed HoV = dot(H, V);
+                    fixed NoV = dot(i.normal, V);
+
+                    fixed3 F = fresnel_schlick(saturate(HoV), F0);
+                    fixed Kd = 1.0 - F;
+                    Kd *= 1.0 - UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Metallic);
+                    fixed3 D = distribution_ggx(NoH, UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Roughness));
+                    fixed3 G = geometry_smith(i.normal, V, L, UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Roughness));
+                    fixed3 nom = D * F * G;
+                    fixed denom = 4.0 * saturate(NoV) * saturate(NoL) + 0.001;
+                    diffuse += Kd * g_DirectionalLightColors[j] / _PI * NoL;
+                    specular += nom * g_DirectionalLightColors[j] * NoL / denom;
                 }
                 // fixed4 specular = 0.0;
-                return col * (_Kd * diffuse + _Ks * specular);
+                return fixed4(col.rgb * (diffuse + specular), col.a);
             }
             ENDCG
         }
