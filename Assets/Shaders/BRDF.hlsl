@@ -1,10 +1,12 @@
 ﻿#ifndef __CUSTOM_BRDF
 #define __CUSTOM_BRDF
 
+#define DEFAULT_F0 0.04f
+
 // F part
-fixed3 fresnel_schlick(fixed cos_theta, fixed3 F0)
+fixed3 fresnel_schlick(fixed HoV, fixed3 F0)
 {
-    return F0 + (1.0f - F0) * pow(saturate(1.0 - cos_theta), 5.0f);
+    return F0 + (1.0f - F0) * pow(saturate(1.0 - saturate(HoV)), 5.0f);
 }
 
 // GGX D part

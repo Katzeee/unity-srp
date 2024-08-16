@@ -19,9 +19,10 @@ Shader "CustomShaders/Lit"
             #pragma fragment frag
 
             #include "UnityCG.cginc"
+            #include "Fragment.hlsl"
             #include "Light.hlsl"
-            #include "BRDF.hlsl"
-
+            #include "Lighting.hlsl"
+            
             struct v2f
             {
                 float4 pos: SV_POSITION;
@@ -46,7 +47,7 @@ Shader "CustomShaders/Lit"
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 o.pos = UnityObjectToClipPos(v.vertex);
                 o.pos_W = mul(UNITY_MATRIX_M, v.vertex);
-                o.normal = normalize(UnityObjectToWorldNormal(v.normal));
+                o.normal = UnityObjectToWorldNormal(v.normal);
                 float4 cur_tex_ST = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _MainTex_ST);
                 o.uv = TRANSFORM_TEX(v.texcoord, cur_tex);
                 return o;
@@ -55,36 +56,33 @@ Shader "CustomShaders/Lit"
             fixed4 frag (v2f i) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(i)
-                fixed4 col = tex2D(_MainTex, i.uv) * UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _BaseColor);
-                fixed3 diffuse = 0;
-                fixed3 specular = 0;
-                fixed3 F0 = 0.04f;
-                F0 = lerp(F0, col, UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Metallic));
+                // prepare surface
+                Surface s;
+                s.metallic = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Metallic);
+                s.roughness = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Roughness);
+                s.albedo = tex2D(_MainTex, i.uv) * UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _BaseColor);
+                
+                fixed3 direct_lighting = 0;
+                
+                // prepare vectors and dot products
+                FragValue f;
+                f.N = normalize(i.normal);
+                f.V = normalize(_WorldSpaceCameraPos - i.pos_W);
+                f.NoV = dot(f.N, f.V);
+                
                 for (int j = 0; j < g_DirectionalLightCount; j++)
                 {
-                    // prepare vectors and dot products
-                    fixed3 N = normalize(i.normal);
-                    fixed3 L = normalize(g_DirectionalLightDirs[j]);
-                    fixed NoL = saturate(dot(N, L));
-                    fixed3 V = normalize(_WorldSpaceCameraPos - i.pos_W);
-                    fixed3 H = normalize(V + L);
-                    fixed NoH = dot(N, H);
-                    fixed HoV = dot(H, V);
-                    fixed NoV = dot(N, V);
+                    f.L = normalize(g_DirectionalLightDirs[j]);
+                    f.NoL = dot(f.N, f.L);
+                    f.H = normalize(f.V + f.L);
+                    f.NoH = dot(f.N, f.H);
+                    f.HoV = dot(f.H, f.V);
 
-                    // calculate pbr lighting
-                    fixed3 F = fresnel_schlick(saturate(HoV), F0);
-                    fixed Kd = 1.0 - F;
-                    Kd *= 1.0 - UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Metallic);
-                    fixed3 D = distribution_ggx(NoH, UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Roughness));
-                    fixed3 G = geometry_smith(N, V, L, UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Roughness));
-                    fixed3 nom = D * F * G;
-                    fixed denom = 4.0 * saturate(NoV) * saturate(NoL) + 0.001;
-                    diffuse += Kd * g_DirectionalLightColors[j] / UNITY_PI * NoL;
-                    specular += nom * g_DirectionalLightColors[j] * NoL / denom;
+                    // calculate direct light lighting
+                    direct_lighting += cook_torrance_brdf(f, s) * g_DirectionalLightColors[j];
+                    
                 }
-                // fixed4 specular = 0.0;
-                return fixed4(col.rgb * (diffuse + specular), col.a);
+                return fixed4(direct_lighting, s.albedo.a);
             }
             ENDCG
         }
