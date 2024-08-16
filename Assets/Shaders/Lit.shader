@@ -11,7 +11,7 @@ Shader "CustomShaders/Lit"
         [Enum(Off, 0, On, 1)] _ZWrite("Z Write", Float) = 1
         _CutOff("Alpha Cutoff", Range(0.0, 1.0)) = 0.8
         [Toggle(_CLIPPING)] _Clipping("Alpha Clipping", Float) = 0
-        [Toggle(_PRE_MULTIPLE_ALPHA)] _PremulAlpha("Premultiply alpha", Float) = 0
+        [Toggle(_PREMUL_ALPHA)] _PremulAlpha("Premultiply alpha", Float) = 0
     }
     SubShader
     {
@@ -24,7 +24,7 @@ Shader "CustomShaders/Lit"
             CGPROGRAM
             #pragma multi_compile_instancing
             #pragma shader_feature _CLIPPING
-            #pragma shader_feature _PRE_MULTIPLE_ALPHA
+            #pragma shader_feature _PREMUL_ALPHA
             #pragma vertex vert
             #pragma fragment frag
 
@@ -90,7 +90,7 @@ Shader "CustomShaders/Lit"
                     f.HoV = dot(f.H, f.V);
 
                     // calculate direct light lighting
-#ifdef _PRE_MULTIPLE_ALPHA     
+#ifdef _PREMUL_ALPHA     
                     direct_lighting += cook_torrance_brdf(f, s, true) * g_DirectionalLightColors[j];
 #else                    
                     direct_lighting += cook_torrance_brdf(f, s) * g_DirectionalLightColors[j];
@@ -105,4 +105,5 @@ Shader "CustomShaders/Lit"
             ENDCG
         }
     }
+    CustomEditor "CustomShaderGUI"
 }

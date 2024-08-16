@@ -73,4 +73,5 @@ Shader "CustomShaders/Unlit"
             ENDCG
         }
     }
+    CustomEditor "CustomShaderGUI"
 }
