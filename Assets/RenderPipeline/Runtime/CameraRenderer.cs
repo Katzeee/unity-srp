@@ -6,8 +6,8 @@ public partial class CameraRenderer
     private ScriptableRenderContext m_context;
     private Camera m_camera;
     private CullingResults m_cullingRes;
-    private CommandBuffer m_commandBuffer = new ();
-    private Lighting m_lighting = new ();
+    private CommandBuffer m_commandBuffer = new();
+    private Lighting m_lighting = new();
 
     private static string[] s_supportedRenderIds = new[]
     {
@@ -15,39 +15,50 @@ public partial class CameraRenderer
         "CustomLit",
     };
 
-    public void Render(ScriptableRenderContext context, Camera camera, bool useDynamicBatching, bool useGpuInstancing)
+    public void Render(ScriptableRenderContext context, Camera camera, bool useDynamicBatching, bool useGpuInstancing,
+        ShadowSettings shadowSettings)
     {
         m_context = context;
         m_camera = camera;
-        PrepareCommandBuffer();
         
+        PrepareCommandBuffer();
         PrepareForSceneWindow();
-        Cull();
+        Cull(shadowSettings.maxDistance);
+        m_commandBuffer.BeginSample(SampleName);
+        ExecuteBuffer();
+        m_lighting.Setup(m_context, m_cullingRes, shadowSettings);
+        m_commandBuffer.EndSample(SampleName);
         Setup();
-        m_lighting.Setup(m_context, m_cullingRes);
+        
         DrawVisibleGeometry(useDynamicBatching, useGpuInstancing);
         DrawUnsupportedShader();
         DrawGizmos();
+        m_lighting.CleanUp();
+        
         Submit();
     }
 
-    private bool Cull()
+    private bool Cull(float maxShadowDistance)
     {
         ScriptableCullingParameters p;
         if (m_camera.TryGetCullingParameters(out p))
         {
+            p.shadowDistance = Mathf.Min(maxShadowDistance, m_camera.farClipPlane);
             m_cullingRes = m_context.Cull(ref p);
-            return true; 
+            return true;
         }
+
         return false;
     }
 
+    // before drawing, clean the framebuffer
     private void Setup()
     {
         m_context.SetupCameraProperties(m_camera);
         CameraClearFlags clearFlags = m_camera.clearFlags;
-        m_commandBuffer.ClearRenderTarget(clearFlags <= CameraClearFlags.Depth, clearFlags <= CameraClearFlags.Color, 
+        m_commandBuffer.ClearRenderTarget(clearFlags <= CameraClearFlags.Depth, clearFlags <= CameraClearFlags.Color,
             clearFlags == CameraClearFlags.Color ? m_camera.backgroundColor.linear : Color.clear);
+        // QUESTION: must excute buffer after begin sample?
         m_commandBuffer.BeginSample(SampleName);
         ExecuteBuffer();
     }
@@ -80,6 +91,7 @@ public partial class CameraRenderer
         {
             drawingSettings.SetShaderPassName(i, new ShaderTagId(s_supportedRenderIds[i]));
         }
+
         var filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
         // draw opaque
         m_context.DrawRenderers(m_cullingRes, ref drawingSettings, ref filteringSettings);

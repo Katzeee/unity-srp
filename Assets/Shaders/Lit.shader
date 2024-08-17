@@ -15,10 +15,11 @@ Shader "CustomShaders/Lit"
     }
     SubShader
     {
-        Tags { "LightMode"="CustomLit" }
-
         Pass
         {
+            
+            Tags { "LightMode"="CustomLit" }
+            
             Blend[_SrcBlend][_DstBlend]
             ZWrite[_ZWrite]
             CGPROGRAM
