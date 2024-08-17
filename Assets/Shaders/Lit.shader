@@ -15,14 +15,15 @@ Shader "CustomShaders/Lit"
     }
     SubShader
     {
+        Tags { "LightMode"="CustomLit" }
         Pass
         {
-            
-            Tags { "LightMode"="CustomLit" }
+            Name "LitPass"
             
             Blend[_SrcBlend][_DstBlend]
             ZWrite[_ZWrite]
             CGPROGRAM
+            #pragma target 3.5
             #pragma multi_compile_instancing
             #pragma shader_feature _CLIPPING
             #pragma shader_feature _PREMUL_ALPHA
@@ -102,6 +103,45 @@ Shader "CustomShaders/Lit"
                 clip(s.albedo.a - UNITY_ACCESS_INSTANCED_PROP(UnityPreMaterial, _CutOff));
 #endif
                 return fixed4(direct_lighting, s.albedo.a);
+            }
+            ENDCG
+        }
+
+        Pass 
+        {
+            Name "ShadowMapPass"
+            Tags { "LightMode" = "ShadowCaster" }
+            
+            ColorMask 0
+            
+            CGPROGRAM
+            #pragma target 3.5
+            #pragma multi_compile_instancing
+            #pragma shader_feature _CLIPPING
+            #pragma shader_feature _PREMUL_ALPHA
+            #pragma vertex vert
+            #pragma fragment frag
+            
+            #include "UnityCG.cginc"
+
+            struct v2f
+            {
+                fixed4 pos: SV_POSITION;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            v2f vert(appdata_tan v)
+            {
+                v2f o;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+                o.pos = UnityObjectToClipPos(v.vertex);
+                return o;
+            }
+
+            void frag(v2f i)
+            {
+                
             }
             ENDCG
         }

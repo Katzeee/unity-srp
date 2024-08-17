@@ -14,4 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   useDynamicBatching: 1
   useGpuInstancing: 1
-  useSrpBatcher: 0
+  useSrpBatcher: 1
+  shadowSettings:
+    maxDistance: 20
+    dirLight:
+      textureSize: 1024
