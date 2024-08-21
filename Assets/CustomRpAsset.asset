@@ -16,7 +16,9 @@ MonoBehaviour:
   useGpuInstancing: 1
   useSrpBatcher: 1
   shadowSettings:
-    maxDistance: 30
+    maxDistance: 15.9
+    fadeDistance: 0.1
+    fadeCascade: 0.1
     dirLightShadow:
       textureSize: 2048
       cascadeCount: 4

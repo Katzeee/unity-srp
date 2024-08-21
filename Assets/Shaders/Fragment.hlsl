@@ -7,7 +7,6 @@ struct Surface
     fixed4 metallic;
     // fixed3 F0;
     fixed roughness;
-    
 };
 
 struct FragValue

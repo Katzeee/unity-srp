@@ -23,14 +23,15 @@ public class CShadow
     private static int s_worldToDirLightShadowMatrixId = Shader.PropertyToID("g_worldToDirLightShadowMatrix");
     private static int s_dirLightShadowDataPackedId = Shader.PropertyToID("g_dirLightShadowDataPacked");
     private static int s_dirLightShadowCountId = Shader.PropertyToID("g_dirLightShadowCount");
-    private static int s_cascadeSphereId = Shader.PropertyToID("g_cascadeSphere");
+    private static int s_cascadeBoundingSphereId = Shader.PropertyToID("g_cascadeBoundingSphere");
+    private static int s_shadowFadeDistancePackedId = Shader.PropertyToID("g_shadowFadeDistancePacked");
 
     // shader variables
     private static Matrix4x4[] s_worldToDirLightShadowMatrix =
         new Matrix4x4[c_maxDirLightShadowCount * c_maxDirLightShadowCascadeCount];
 
     private static Vector4[] s_dirLightShadowDataPacked = new Vector4[c_maxDirLightShadowCount];
-    private static Vector4[] s_cascadeSphere = new Vector4[c_maxDirLightShadowCascadeCount];
+    private static Vector4[] s_cascadeBoundingSphere = new Vector4[c_maxDirLightShadowCascadeCount];
 
     struct SShadowDirLight
     {
@@ -73,7 +74,10 @@ public class CShadow
         m_commandBuffer.SetGlobalInt(s_dirLightShadowCountId, m_dirLightShadowCount);
         m_commandBuffer.SetGlobalVectorArray(s_dirLightShadowDataPackedId, s_dirLightShadowDataPacked);
         m_commandBuffer.SetGlobalMatrixArray(s_worldToDirLightShadowMatrixId, s_worldToDirLightShadowMatrix);
-        m_commandBuffer.SetGlobalVectorArray(s_cascadeSphereId, s_cascadeSphere);
+        m_commandBuffer.SetGlobalVectorArray(s_cascadeBoundingSphereId, s_cascadeBoundingSphere);
+        m_commandBuffer.SetGlobalVector(s_shadowFadeDistancePackedId,
+            new Vector4(1.0f / m_shadowSettings.maxDistance, 1.0f / m_shadowSettings.fadeDistance,
+                1.0f / (1.0f - (1.0f - m_shadowSettings.fadeCascade) * (1.0f - m_shadowSettings.fadeCascade))));
     }
 
     private void RenderDirLightShadows()
@@ -129,9 +133,9 @@ public class CShadow
         // all light use the same cascade
         if (lightIndex == 0)
         {
-            s_cascadeSphere[cascadeIndex] = shadowSplitData.cullingSphere;
+            s_cascadeBoundingSphere[cascadeIndex] = shadowSplitData.cullingSphere;
             // radius square, for distance compare in shader
-            s_cascadeSphere[cascadeIndex].w *= s_cascadeSphere[cascadeIndex].w;
+            s_cascadeBoundingSphere[cascadeIndex].w *= s_cascadeBoundingSphere[cascadeIndex].w;
         }
 
         // calculate the block index of atlas

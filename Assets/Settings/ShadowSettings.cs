@@ -4,6 +4,10 @@ using UnityEngine;
 public class ShadowSettings
 {
     [Min(0f)] public float maxDistance = 100f;
+    // fade at max distance
+    [Range(0.001f, 1f)] public float fadeDistance = 0.1f;
+    // fade at last cascade
+    [Range(0.001f, 1f)] public float fadeCascade = 0.1f;
 
     public enum TextureSize
     {
