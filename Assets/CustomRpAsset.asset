@@ -12,10 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0eaa841f31addd8449db2a5b5798ed32, type: 3}
   m_Name: CustomRpAsset
   m_EditorClassIdentifier: 
-  useDynamicBatching: 0
-  useGpuInstancing: 0
-  useSrpBatcher: 0
+  useDynamicBatching: 1
+  useGpuInstancing: 1
+  useSrpBatcher: 1
   shadowSettings:
-    maxDistance: 20
-    dirLight:
-      textureSize: 1024
+    maxDistance: 30
+    dirLightShadow:
+      textureSize: 2048
+      cascadeCount: 4
+      mixRatio: 0.8
