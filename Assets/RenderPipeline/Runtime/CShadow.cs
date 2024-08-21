@@ -14,15 +14,21 @@ public class CShadow
     private CullingResults m_cullingRes;
 
     private ShadowSettings m_shadowSettings;
-    private const int c_maxDirLightShadowCount = 1;
+    private const int c_maxDirLightShadowCount = 4;
     private int m_dirLightShadowCount = 0;
+
     private static int s_dirLightShadowMapId = Shader.PropertyToID("g_dirLightShadowMap");
     private static int s_worldToDirLightClipSpaceMatrixId = Shader.PropertyToID("g_worldToDirLightClipSpaceMatrix");
+    private static int s_dirLightShadowDataPackedId = Shader.PropertyToID("g_dirLightShadowDataPacked");
+    private static int s_dirLightShadowCountId = Shader.PropertyToID("g_dirLightShadowCount");
+
     private static Matrix4x4[] s_worldToDirLightClipSpaceMatrix = new Matrix4x4[c_maxDirLightShadowCount];
+    private static Vector4[] s_dirLightShadowDataPacked = new Vector4[c_maxDirLightShadowCount];
 
     struct SShadowDirLight
     {
         public int index;
+        public float shadowStrength;
     }
 
     private SShadowDirLight[] m_shadowDirLights = new SShadowDirLight[c_maxDirLightShadowCount];
@@ -35,12 +41,15 @@ public class CShadow
         m_dirLightShadowCount = 0;
     }
 
+    // called by Lighting to reserve light data
     public void ReserveDirShadows(Light light, int lightIndex)
     {
         if (m_dirLightShadowCount < c_maxDirLightShadowCount && light.shadows != LightShadows.None &&
             light.shadowStrength > 0f && m_cullingRes.GetShadowCasterBounds(lightIndex, out Bounds b))
         {
-            m_shadowDirLights[m_dirLightShadowCount++] = new SShadowDirLight { index = lightIndex };
+            m_shadowDirLights[m_dirLightShadowCount] = new SShadowDirLight
+                { index = lightIndex, shadowStrength = light.shadowStrength };
+            m_dirLightShadowCount++;
         }
     }
 
@@ -67,7 +76,9 @@ public class CShadow
         m_commandBuffer.BeginSample(c_commandBufferName);
         ExcuteBuffer();
         // divide shadow RT to blocks
-        int blockSize = m_dirLightShadowCount <= 1 ? 1 : 2; // one axis
+        int blockSize = m_dirLightShadowCount <= 1
+            ? 1
+            : Mathf.CeilToInt(Mathf.Sqrt((float)c_maxDirLightShadowCount)); // one axis
         int tileSize = textureSize / blockSize;
         for (int i = 0; i < m_dirLightShadowCount; i++)
         {
@@ -75,22 +86,27 @@ public class CShadow
             ConvertToAtlasMatrix(blockSize, i);
         }
 
+        m_commandBuffer.SetGlobalInt(s_dirLightShadowCountId, m_dirLightShadowCount);
+        m_commandBuffer.SetGlobalVectorArray(s_dirLightShadowDataPackedId, s_dirLightShadowDataPacked);
         m_commandBuffer.SetGlobalMatrixArray(s_worldToDirLightClipSpaceMatrixId, s_worldToDirLightClipSpaceMatrix);
         m_commandBuffer.EndSample(c_commandBufferName);
         ExcuteBuffer();
     }
 
-    private void RenderDirLightShadow(int blockIndex, int blockSize, int tileSize)
+    private void RenderDirLightShadow(int blockIndex, int blockSize, int blockLength)
     {
         var light = m_shadowDirLights[blockIndex];
+        s_dirLightShadowDataPacked[blockIndex].x = light.shadowStrength;
+        s_dirLightShadowDataPacked[blockIndex].w = light.shadowStrength;
         var shadowSettings =
             new ShadowDrawingSettings(m_cullingRes, light.index, BatchCullingProjectionType.Orthographic);
-        m_cullingRes.ComputeDirectionalShadowMatricesAndCullingPrimitives(light.index, 0, 1, Vector3.zero, tileSize, 0f,
+        m_cullingRes.ComputeDirectionalShadowMatricesAndCullingPrimitives(light.index, 0, 1, Vector3.zero, blockLength,
+            0f,
             out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out ShadowSplitData shadowSplitData);
         shadowSettings.splitData = shadowSplitData;
 
-        var viewPort = new Rect(new Vector2(blockIndex % blockSize, blockIndex / blockSize) * tileSize,
-            new Vector2(tileSize, tileSize));
+        var viewPort = new Rect(new Vector2(blockIndex % blockSize, blockIndex / blockSize) * blockLength,
+            new Vector2(blockLength, blockLength));
         m_commandBuffer.SetViewport(viewPort);
         m_commandBuffer.SetViewProjectionMatrices(viewMatrix, projMatrix);
         s_worldToDirLightClipSpaceMatrix[blockIndex] = projMatrix * viewMatrix;
@@ -111,11 +127,15 @@ public class CShadow
                 Matrix4x4.Scale(new Vector3(1f, 1f, -1f)) * s_worldToDirLightClipSpaceMatrix[index];
         }
 
-        // SystemInfo.
-        // float scaleSize = 1.0f / (float)blockSize;
-        // float xOffset = (index % blockSize) * scaleSize;
-        // float yOffset = ((float)index / blockSize) * scaleSize;
-        // Matrix4x4.Translate(new Vector3(xOffset, yOffset, 0)) * Matrix4x4.Scale(new Vector3(scaleSize, scaleSize, 0));
+        // convert uv from 0 - 1 to block uv, when blockSize == 2
+        float scaleSize = 1.0f / (float)blockSize;
+        int xOffset = index % blockSize;
+        int yOffset = index / blockSize;
+
+        s_worldToDirLightClipSpaceMatrix[index] =
+            Matrix4x4.Translate(new Vector3(xOffset * scaleSize, yOffset * scaleSize, 0)) *
+            Matrix4x4.Scale(new Vector3(scaleSize, scaleSize, 1)) *
+            s_worldToDirLightClipSpaceMatrix[index];
     }
 
     public void CleanUp()

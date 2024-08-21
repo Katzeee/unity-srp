@@ -63,6 +63,11 @@ public partial class CameraRenderer
     }
 #else
     const string SampleName = "Camera Renderer";
+
+    private partial void DrawUnsupportedShader() {}
+    private partial void DrawGizmos() {}
+    private partial void PrepareForSceneWindow() {}
+    private partial void PrepareCommandBuffer() {}
 #endif
     
 }

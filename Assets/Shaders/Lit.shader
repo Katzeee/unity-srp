@@ -11,7 +11,8 @@ Shader "CustomShaders/Lit"
         [Enum(Off, 0, On, 1)] _ZWrite("Z Write", Float) = 1
         _CutOff("Alpha Cutoff", Range(0.0, 1.0)) = 0.8
         [Toggle(_CLIPPING)] _Clipping("Alpha Clipping", Float) = 0
-        [Toggle(_PREMUL_ALPHA)] _PremulAlpha("Premultiply alpha", Float) = 0
+        [Toggle(_PREMUL_ALPHA)] _PremulAlpha("Premultiply Alpha", Float) = 0
+        [Toggle(_RECEIVE_SHADOW)] _ReceiveShadow("Receive Shadow", Float) = 1
     }
     SubShader
     {
@@ -27,6 +28,7 @@ Shader "CustomShaders/Lit"
             #pragma multi_compile_instancing
             #pragma shader_feature _CLIPPING
             #pragma shader_feature _PREMUL_ALPHA
+            #pragma shader_feature _RECEIVE_SHADOW
             #pragma vertex vert
             #pragma fragment frag
 
@@ -104,7 +106,9 @@ Shader "CustomShaders/Lit"
 #ifdef _CLIPPING
                 clip(s.albedo.a - UNITY_ACCESS_INSTANCED_PROP(UnityPreMaterial, _CutOff));
 #endif
+#ifdef _RECEIVE_SHADOW
                 direct_lighting *= get_shadow_attenuation(i.pos_WS);
+#endif
                 return fixed4(direct_lighting, s.albedo.a);
             }
             ENDCG
