@@ -34,17 +34,19 @@ Shader "CustomShaders/Lit"
             #include "Fragment.hlsl"
             #include "Light.hlsl"
             #include "Lighting.hlsl"
+            #include "Shadow.hlsl"
             
             struct v2f
             {
                 float4 pos: SV_POSITION;
-                float4 pos_W: TEXCOORD0;
+                float4 pos_WS: TEXCOORD0;
                 float3 normal: TEXCOORD1;
                 float2 uv: TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             sampler2D _MainTex;
+            
             UNITY_INSTANCING_BUFFER_START(UnityPerMaterial)
                 UNITY_DEFINE_INSTANCED_PROP(float4, _BaseColor)
                 UNITY_DEFINE_INSTANCED_PROP(float4, _MainTex_ST)
@@ -59,7 +61,7 @@ Shader "CustomShaders/Lit"
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 o.pos = UnityObjectToClipPos(v.vertex);
-                o.pos_W = mul(UNITY_MATRIX_M, v.vertex);
+                o.pos_WS = mul(UNITY_MATRIX_M, v.vertex);
                 o.normal = UnityObjectToWorldNormal(v.normal);
                 float4 cur_tex_ST = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _MainTex_ST);
                 o.uv = TRANSFORM_TEX(v.texcoord, cur_tex);
@@ -80,7 +82,7 @@ Shader "CustomShaders/Lit"
                 // prepare vectors and dot products
                 FragValue f;
                 f.N = normalize(i.normal);
-                f.V = normalize(_WorldSpaceCameraPos - i.pos_W);
+                f.V = normalize(_WorldSpaceCameraPos - i.pos_WS);
                 f.NoV = dot(f.N, f.V);
                 
                 for (int j = 0; j < g_DirectionalLightCount; j++)
@@ -102,6 +104,7 @@ Shader "CustomShaders/Lit"
 #ifdef _CLIPPING
                 clip(s.albedo.a - UNITY_ACCESS_INSTANCED_PROP(UnityPreMaterial, _CutOff));
 #endif
+                direct_lighting *= get_shadow_attenuation(i.pos_WS);
                 return fixed4(direct_lighting, s.albedo.a);
             }
             ENDCG
