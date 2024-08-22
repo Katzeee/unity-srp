@@ -18,7 +18,7 @@ SAMPLER_CMP(sampler_linear_clamp_compare);
 #elif defined(_DIR_LIGHT_PCF3x3)
 #define DIR_LIGHT_FILTER_SAMPLES 4
 #define GET_FILTER_SAMPLE_WEIGHT(t, p, ow, op) SampleShadow_ComputeSamples_Tent_3x3(t, p, ow, op)
-#else 
+#else
 #define DIR_LIGHT_FILTER_SAMPLES 1
 #define GET_FILTER_SAMPLE_WEIGHT(t, p, ow, op)
 #endif
@@ -39,7 +39,6 @@ CBUFFER_START(_CustomShadow)
     int g_dirLightShadowCount;
 CBUFFER_END
 
-
 bool invalid_uv(fixed2 uv)
 {
     return 0 < uv.x && uv.x < 1 && 0 < uv.y && uv.y < 1;
@@ -56,12 +55,22 @@ fixed sample_pcf_shadow(fixed3 pos_sts)
     float2 sample_pos[DIR_LIGHT_FILTER_SAMPLES];
     GET_FILTER_SAMPLE_WEIGHT(g_shadowTextureDataPacked.yyxx, pos_sts.xy, weight, sample_pos);
     float shadow = 0;
+    [unroll(DIR_LIGHT_FILTER_SAMPLES)]
     for (int i = 0; i < DIR_LIGHT_FILTER_SAMPLES; i++)
     {
         shadow += weight[i] * SAMPLE_TEXTURE2D_SHADOW(g_dirLightShadowMap, sampler_linear_clamp_compare,
                                                       fixed3(sample_pos[i].xy, pos_sts.z));
     }
     return shadow;
+}
+
+fixed sample_shadow(fixed3 pos_sts)
+{
+    #if defined(_DIR_LIGHT_PCF2x2) || defined(_DIR_LIGHT_PCF3x3)
+    return sample_pcf_shadow(pos_sts);
+    #else
+    return sample_hard_shadow(pos_sts);
+    #endif
 }
 
 int get_cascade_level(fixed3 pos_ws)
@@ -74,6 +83,18 @@ int get_cascade_level(fixed3 pos_ws)
         }
     }
     return MAX_CASCADE_COUNT;
+}
+
+fixed4 get_pos_sts(fixed4 pos_ws, int cascade_level, int light_index, fixed3 N)
+{
+    // sts: shadow texture space
+    // along normal direction bias texel size
+    fixed4 bias = fixed4(
+        normalize(N) * g_cascadeDataPacked[cascade_level].y * g_dirLightShadowDataPacked[light_index].y, 0);
+    fixed4 pos_sts = mul(g_worldToDirLightShadowMatrix[light_index * MAX_CASCADE_COUNT + cascade_level], pos_ws + bias);
+    pos_sts.xyz /= pos_sts.w;
+    pos_sts.z = pos_sts.z * 0.5 + 0.5;
+    return pos_sts;
 }
 
 // fade at the max distance and last cascade, (1 - distance / maxDistance) / fadeFactor(fadeAreaLength)
@@ -91,34 +112,30 @@ fixed get_shadow_attenuation(int light_index, fixed4 pos_ws, fixed3 N)
     {
         return 1.0;
     }
-    // sts: shadow texture space
-    // along normal direction bias texel size
-    fixed4 bias = fixed4(normalize(N) * g_cascadeDataPacked[level].y * g_dirLightShadowDataPacked[light_index].y, 0);
-    // fixed4 bias = 0;
-    fixed4 pos_sts = mul(g_worldToDirLightShadowMatrix[light_index * MAX_CASCADE_COUNT + level], pos_ws + bias);
-    pos_sts.xyz /= pos_sts.w;
-    pos_sts.z = pos_sts.z * 0.5 + 0.5;
-    // if (!invalid_uv(pos_SS.xy))
-    // {
-    //     shadow_attenuation = 0.0f;
-    // }
-
+    fixed4 pos_sts = get_pos_sts(pos_ws, level, light_index, N);
     fixed shadow_strength = g_dirLightShadowDataPacked[light_index].x;
     // max distance fade: (1 - depth / maxShadowDistance) / fadeDistance
     shadow_strength *= fade_shadow_strength(depth, g_shadowFadeDistancePacked.x, g_shadowFadeDistancePacked.y);
-    // last cascade fade: (1 - d ^ 2 / r ^ 2) / (1 - (1 - fadeCascade) ^ 2)
+    fixed shadow_attenuation = sample_shadow(pos_sts.xyz);
     if (level == MAX_CASCADE_COUNT - 1)
     {
+        // last cascade fade: (1 - d ^ 2 / r ^ 2) / (1 - (1 - fadeCascade) ^ 2)
         shadow_strength *= fade_shadow_strength(
             distance_squared(pos_ws, g_cascadeBoundingSphere[MAX_CASCADE_COUNT - 1]),
             1.0f / g_cascadeBoundingSphere[MAX_CASCADE_COUNT - 1].w, g_shadowFadeDistancePacked.z);
     }
-
-#if defined(_DIR_LIGHT_PCF2x2) || defined(_DIR_LIGHT_PCF3x3)
-    fixed shadow_attenuation = lerp(1.0f, sample_pcf_shadow(pos_sts), shadow_strength);
-#else
-    fixed shadow_attenuation = lerp(1.0f, sample_hard_shadow(pos_sts), shadow_strength);
-#endif
+    else
+    {
+        fixed blend_ration = fade_shadow_strength(
+            distance_squared(pos_ws, g_cascadeBoundingSphere[level]),
+            1.0f / g_cascadeBoundingSphere[level].w, g_shadowFadeDistancePacked.z);
+        if (blend_ration < 1.0)
+        {
+            pos_sts = get_pos_sts(pos_ws, level + 1, light_index, N);
+            shadow_attenuation = lerp(sample_shadow(pos_sts), shadow_attenuation, blend_ration);
+        }
+    }
+    shadow_attenuation = lerp(1.0f, shadow_attenuation, shadow_strength);
     return shadow_attenuation;
 }
 

@@ -161,7 +161,7 @@ Light:
     m_Type: 2
     m_Resolution: -1
     m_CustomResolution: -1
-    m_Strength: 0.82
+    m_Strength: 0.929
     m_Bias: 0.514
     m_NormalBias: 0.314
     m_NearPlane: 0.54
@@ -361,7 +361,7 @@ Light:
     m_Type: 2
     m_Resolution: -1
     m_CustomResolution: -1
-    m_Strength: 0.726
+    m_Strength: 1
     m_Bias: 0.657
     m_NormalBias: 0.652
     m_NearPlane: 1.4
@@ -1075,7 +1075,7 @@ Light:
     m_Type: 2
     m_Resolution: -1
     m_CustomResolution: -1
-    m_Strength: 0.764
+    m_Strength: 0.926
     m_Bias: 0.471
     m_NormalBias: 0.343
     m_NearPlane: 0.68
