@@ -53,9 +53,6 @@ fixed fade_shadow_strength(fixed d, fixed m, fixed f)
     return saturate((1 - d * m) * f);
 }
 
-
-
-
 // CALCULATE SHADOW ATTENUATION FOR EACH LIGHT SEPARATELY, NOT **AVERAGE** THEM!!!
 fixed get_shadow_attenuation(int light_index, fixed4 pos_ws, fixed3 N)
 {
@@ -67,7 +64,8 @@ fixed get_shadow_attenuation(int light_index, fixed4 pos_ws, fixed3 N)
     }
     // sts: shadow texture space
     // along normal direction bias texel size
-    fixed4 bias = fixed4(normalize(N) * g_cascadeDataPacked[level].y * 0.5, 0);
+    fixed4 bias = fixed4(normalize(N) * g_cascadeDataPacked[level].y, 0);
+    // fixed4 bias = 0;
     fixed4 pos_sts = mul(g_worldToDirLightShadowMatrix[light_index * MAX_CASCADE_COUNT + level], pos_ws + bias);
     pos_sts.xyz /= pos_sts.w;
     pos_sts.z = pos_sts.z * 0.5 + 0.5;

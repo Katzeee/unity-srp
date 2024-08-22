@@ -120,7 +120,8 @@ Shader "CustomShaders/Lit"
         {
             Name "ShadowMapPass"
             Tags { "LightMode" = "ShadowCaster" }
-            Cull Front
+            // DO NOT USE CULL FRONT WITH BIAS => LIGHT LEAK
+            // Cull Front
             
             ColorMask 0
             

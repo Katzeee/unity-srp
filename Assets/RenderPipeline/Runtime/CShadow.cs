@@ -154,10 +154,10 @@ public class CShadow
         m_commandBuffer.SetViewport(viewPort);
         m_commandBuffer.SetViewProjectionMatrices(viewMatrix, projMatrix);
         s_worldToDirLightShadowMatrix[blockIndex] = projMatrix * viewMatrix;
-        m_commandBuffer.SetGlobalDepthBias(0, light.slopeScaleBias);
+        // m_commandBuffer.SetGlobalDepthBias(0, light.slopeScaleBias);
         ExcuteBuffer();
         m_context.DrawShadows(ref shadowSettings);
-        m_commandBuffer.SetGlobalDepthBias(0, 0);
+        // m_commandBuffer.SetGlobalDepthBias(0, 0);
     }
 
     private void ConvertToAtlasMatrix(int blockSize, int lightIndex, int cascadeIndex)
