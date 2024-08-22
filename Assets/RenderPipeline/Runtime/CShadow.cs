@@ -42,6 +42,7 @@ public class CShadow
         public float shadowStrength;
         public float slopeScaleBias;
         public float normalBias;
+        public float nearPlaneOffset;
     }
 
     private SShadowDirLight[] m_shadowDirLights = new SShadowDirLight[c_maxDirLightShadowCount];
@@ -62,10 +63,11 @@ public class CShadow
         {
             m_shadowDirLights[m_dirLightShadowCount] = new SShadowDirLight
             {
-                index = lightIndex, 
-                shadowStrength = light.shadowStrength, 
+                index = lightIndex,
+                shadowStrength = light.shadowStrength,
                 slopeScaleBias = light.shadowBias,
-                normalBias = light.shadowNormalBias
+                normalBias = light.shadowNormalBias,
+                nearPlaneOffset = light.shadowNearPlane,
             };
             m_dirLightShadowCount++;
         }
@@ -139,8 +141,7 @@ public class CShadow
         var shadowSettings =
             new ShadowDrawingSettings(m_cullingRes, light.index, BatchCullingProjectionType.Orthographic);
         m_cullingRes.ComputeDirectionalShadowMatricesAndCullingPrimitives(light.index, cascadeIndex,
-            c_maxCascadeCount, GetCascadeRation(), blockLength,
-            0f,
+            c_maxCascadeCount, GetCascadeRation(), blockLength, light.nearPlaneOffset,
             out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out ShadowSplitData shadowSplitData);
         shadowSettings.splitData = shadowSplitData;
         // set cascade data, all light use the same cascade
