@@ -18,6 +18,13 @@ public class CShadow
     private const int c_maxCascadeCount = 4;
     private int m_dirLightShadowCount = 0;
 
+    private static readonly string[] filterModeKey =
+    {
+        "_DIR_LIGHT_HARD_SHADOW",
+        "_DIR_LIGHT_PCF2x2",
+        "_DIR_LIGHT_PCF3x3",
+    };
+
     // shader variable id
     private static readonly int s_dirLightShadowMapId = Shader.PropertyToID("g_dirLightShadowMap");
     private static readonly int s_worldToDirLightShadowMatrixId = Shader.PropertyToID("g_worldToDirLightShadowMatrix");
@@ -26,6 +33,7 @@ public class CShadow
     private static readonly int s_cascadeBoundingSphereId = Shader.PropertyToID("g_cascadeBoundingSphere");
     private static readonly int s_shadowFadeDistancePackedId = Shader.PropertyToID("g_shadowFadeDistancePacked");
     private static readonly int s_cascadeDataPackedId = Shader.PropertyToID("g_cascadeDataPacked");
+    private static readonly int s_shadowTextureDataPackedId = Shader.PropertyToID("g_shadowTextureDataPacked");
 
 
     // shader variables
@@ -88,9 +96,28 @@ public class CShadow
         m_commandBuffer.SetGlobalMatrixArray(s_worldToDirLightShadowMatrixId, s_worldToDirLightShadowMatrix);
         m_commandBuffer.SetGlobalVectorArray(s_cascadeBoundingSphereId, s_cascadeBoundingSphere);
         m_commandBuffer.SetGlobalVectorArray(s_cascadeDataPackedId, s_cascadeDataPacked);
+        m_commandBuffer.SetGlobalVector(s_shadowTextureDataPackedId,
+            new Vector4((float)m_shadowSettings.dirLightShadow.textureSize,
+                1.0f / (float)m_shadowSettings.dirLightShadow.textureSize));
         m_commandBuffer.SetGlobalVector(s_shadowFadeDistancePackedId,
             new Vector4(1.0f / m_shadowSettings.maxDistance, 1.0f / m_shadowSettings.fadeDistance,
                 1.0f / (1.0f - (1.0f - m_shadowSettings.fadeCascade) * (1.0f - m_shadowSettings.fadeCascade))));
+    }
+
+    private void SetFilterMode()
+    {
+        int index = (int)m_shadowSettings.dirLightShadow.filterMode;
+        for (int i = 0; i < filterModeKey.Length; ++i)
+        {
+            if (i == index)
+            {
+                m_commandBuffer.EnableShaderKeyword(filterModeKey[i]);
+            }
+            else
+            {
+                m_commandBuffer.DisableShaderKeyword(filterModeKey[i]);
+            }
+        }
     }
 
     private void RenderDirLightShadows()
@@ -123,6 +150,7 @@ public class CShadow
         }
 
         SendDataToShader();
+        SetFilterMode();
         m_commandBuffer.EndSample(c_commandBufferName);
         ExcuteBuffer();
     }

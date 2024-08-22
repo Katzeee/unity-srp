@@ -1,11 +1,30 @@
 ﻿#ifndef __CUSTOM_SHADOW
 #define __CUSTOM_SHADOW
 
+#include "Common.hlsl"
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Shadow/ShadowSamplingTent.hlsl"
+
 #define MAX_DIR_LIGHT_SHADOW_COUNT 4
 #define MAX_CASCADE_COUNT 4
 
+TEXTURE2D_SHADOW(g_dirLightShadowMap);
+SAMPLER(samplerg_dirLightShadowMap);
+SAMPLER_CMP(sampler_linear_clamp_compare);
+
+
+#ifdef _DIR_LIGHT_PCF2x2
+#define DIR_LIGHT_FILTER_SAMPLES 1
+#define GET_FILTER_SAMPLE_WEIGHT(t, p, ow, op) ow[0] = 1; op[0] = p;
+#elif defined(_DIR_LIGHT_PCF3x3)
+#define DIR_LIGHT_FILTER_SAMPLES 4
+#define GET_FILTER_SAMPLE_WEIGHT(t, p, ow, op) SampleShadow_ComputeSamples_Tent_3x3(t, p, ow, op)
+#else 
+#define DIR_LIGHT_FILTER_SAMPLES 1
+#define GET_FILTER_SAMPLE_WEIGHT(t, p, ow, op)
+#endif
+
 CBUFFER_START(_CustomShadow)
-    sampler2D g_dirLightShadowMap;
+    // sampler2D g_dirLightShadowMap;
     fixed4x4 g_worldToDirLightShadowMatrix[MAX_DIR_LIGHT_SHADOW_COUNT * MAX_CASCADE_COUNT];
     // x: strength, y: normalBias
     fixed4 g_dirLightShadowDataPacked[MAX_DIR_LIGHT_SHADOW_COUNT];
@@ -15,10 +34,11 @@ CBUFFER_START(_CustomShadow)
     fixed4 g_shadowFadeDistancePacked;
     // x: 1 / sphereRadius, y: texel size * sqrt 2
     fixed4 g_cascadeDataPacked[MAX_CASCADE_COUNT];
+    // x: textureSize, y: texelSize
+    fixed4 g_shadowTextureDataPacked;
     int g_dirLightShadowCount;
 CBUFFER_END
 
-#include "Common.hlsl"
 
 bool invalid_uv(fixed2 uv)
 {
@@ -27,12 +47,21 @@ bool invalid_uv(fixed2 uv)
 
 fixed sample_hard_shadow(fixed3 pos_sts)
 {
-    return tex2D(g_dirLightShadowMap, pos_sts.xy) < pos_sts.z ? 1.0 : 0.0;
+    return UNITY_SAMPLE_TEX2D(g_dirLightShadowMap, pos_sts.xy) < pos_sts.z ? 1.0 : 0.0;
 }
 
-fixed sample_pcf_shadow(fixed3 pos_ss)
+fixed sample_pcf_shadow(fixed3 pos_sts)
 {
-    return 1.0;
+    float weight[DIR_LIGHT_FILTER_SAMPLES];
+    float2 sample_pos[DIR_LIGHT_FILTER_SAMPLES];
+    GET_FILTER_SAMPLE_WEIGHT(g_shadowTextureDataPacked.yyxx, pos_sts.xy, weight, sample_pos);
+    float shadow = 0;
+    for (int i = 0; i < DIR_LIGHT_FILTER_SAMPLES; i++)
+    {
+        shadow += weight[i] * SAMPLE_TEXTURE2D_SHADOW(g_dirLightShadowMap, sampler_linear_clamp_compare,
+                                                      fixed3(sample_pos[i].xy, pos_sts.z));
+    }
+    return shadow;
 }
 
 int get_cascade_level(fixed3 pos_ws)
@@ -85,7 +114,11 @@ fixed get_shadow_attenuation(int light_index, fixed4 pos_ws, fixed3 N)
             1.0f / g_cascadeBoundingSphere[MAX_CASCADE_COUNT - 1].w, g_shadowFadeDistancePacked.z);
     }
 
+#if defined(_DIR_LIGHT_PCF2x2) || defined(_DIR_LIGHT_PCF3x3)
+    fixed shadow_attenuation = lerp(1.0f, sample_pcf_shadow(pos_sts), shadow_strength);
+#else
     fixed shadow_attenuation = lerp(1.0f, sample_hard_shadow(pos_sts), shadow_strength);
+#endif
     return shadow_attenuation;
 }
 

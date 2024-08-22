@@ -26,13 +26,14 @@ Shader "CustomShaders/Lit"
             CGPROGRAM
             #pragma target 3.5
             #pragma multi_compile_instancing
+            #pragma multi_compile _DIR_LIGHT_HARD_SHADOW _DIR_LIGHT_PCF2x2 _DIR_LIGHT_PCF3x3 
             #pragma shader_feature _CLIPPING
             #pragma shader_feature _PREMUL_ALPHA
             #pragma shader_feature _RECEIVE_SHADOW
             #pragma vertex vert
             #pragma fragment frag
 
-            #include "UnityCG.cginc"
+            #include "Common.hlsl"
             #include "Fragment.hlsl"
             #include "Light.hlsl"
             #include "Lighting.hlsl"

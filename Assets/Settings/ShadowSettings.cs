@@ -14,7 +14,8 @@ public class ShadowSettings
         _256 = 256,
         _512 = 512,
         _1024 = 1024,
-        _2048 = 2048
+        _2048 = 2048,
+        _4096 = 4096,
     }
 
     [System.Serializable]
@@ -23,12 +24,21 @@ public class ShadowSettings
         public TextureSize textureSize;
         [Range(1, 4)] public int cascadeCount;
         // [Range(0, 1f)] public float mixRatio;
+        public FilterMode filterMode;
+    }
+    
+    public enum FilterMode
+    {
+        HARD,
+        PCF2x2,
+        PCF3x3,
     }
 
     public SDirectionalLightShadow dirLightShadow = new SDirectionalLightShadow
     {
-        textureSize = TextureSize._2048,
+        textureSize = TextureSize._4096,
         cascadeCount = 4,
         // mixRatio = 0.8f
+        filterMode = FilterMode.PCF2x2
     };
 }

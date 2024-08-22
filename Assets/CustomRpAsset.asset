@@ -20,5 +20,6 @@ MonoBehaviour:
     fadeDistance: 0.1
     fadeCascade: 0.1
     dirLightShadow:
-      textureSize: 2048
+      textureSize: 4096
       cascadeCount: 4
+      filterMode: 2
