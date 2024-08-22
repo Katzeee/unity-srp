@@ -87,27 +87,29 @@ Shader "CustomShaders/Lit"
                 f.V = normalize(_WorldSpaceCameraPos - i.pos_WS);
                 f.NoV = dot(f.N, f.V);
                 
-                for (int j = 0; j < g_DirectionalLightCount; j++)
+                for (int light_index = 0; light_index < g_DirectionalLightCount; light_index++)
                 {
-                    f.L = normalize(g_DirectionalLightDirs[j]);
+                    f.L = normalize(g_DirectionalLightDirs[light_index]);
                     f.NoL = dot(f.N, f.L);
                     f.H = normalize(f.V + f.L);
                     f.NoH = dot(f.N, f.H);
                     f.HoV = dot(f.H, f.V);
 
                     // calculate direct light lighting
+                    fixed3 temp_direct_lighting = 0;
 #ifdef _PREMUL_ALPHA     
-                    direct_lighting += cook_torrance_brdf(f, s, true) * g_DirectionalLightColors[j];
+                    temp_direct_lighting = cook_torrance_brdf(f, s, true) * g_DirectionalLightColors[light_index];
 #else                    
-                    direct_lighting += cook_torrance_brdf(f, s) * g_DirectionalLightColors[j];
+                    temp_direct_lighting  = cook_torrance_brdf(f, s) * g_DirectionalLightColors[light_index];
 #endif
+#ifdef _RECEIVE_SHADOW
+                    temp_direct_lighting *= get_shadow_attenuation(light_index, i.pos_WS, f.N);
+#endif
+                    direct_lighting += temp_direct_lighting;
                     
                 }
 #ifdef _CLIPPING
                 clip(s.albedo.a - UNITY_ACCESS_INSTANCED_PROP(UnityPreMaterial, _CutOff));
-#endif
-#ifdef _RECEIVE_SHADOW
-                direct_lighting *= get_shadow_attenuation(i.pos_WS);
 #endif
                 return fixed4(direct_lighting, s.albedo.a);
             }
@@ -118,6 +120,7 @@ Shader "CustomShaders/Lit"
         {
             Name "ShadowMapPass"
             Tags { "LightMode" = "ShadowCaster" }
+            Cull Front
             
             ColorMask 0
             
@@ -128,6 +131,7 @@ Shader "CustomShaders/Lit"
             #pragma shader_feature _PREMUL_ALPHA
             #pragma vertex vert
             #pragma fragment frag
+            
             
             #include "UnityCG.cginc"
 

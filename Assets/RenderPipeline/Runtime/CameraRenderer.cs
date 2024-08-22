@@ -56,8 +56,7 @@ public partial class CameraRenderer
     {
         m_context.SetupCameraProperties(m_camera);
         CameraClearFlags clearFlags = m_camera.clearFlags;
-        m_commandBuffer.ClearRenderTarget(clearFlags <= CameraClearFlags.Depth, clearFlags <= CameraClearFlags.Color,
-            clearFlags == CameraClearFlags.Color ? m_camera.backgroundColor.linear : Color.clear);
+        CCommonUtils.ClearFrameBuffer(m_commandBuffer, clearFlags, Color.clear);
         // QUESTION: must excute buffer after begin sample?
         m_commandBuffer.BeginSample(SampleName);
         ExecuteBuffer();

@@ -22,13 +22,13 @@ public class ShadowSettings
     {
         public TextureSize textureSize;
         [Range(1, 4)] public int cascadeCount;
-        [Range(0, 1f)] public float mixRatio;
+        // [Range(0, 1f)] public float mixRatio;
     }
 
     public SDirectionalLightShadow dirLightShadow = new SDirectionalLightShadow
     {
         textureSize = TextureSize._2048,
         cascadeCount = 4,
-        mixRatio = 0.8f
+        // mixRatio = 0.8f
     };
 }
