@@ -7,7 +7,7 @@
 CBUFFER_START(_CustomShadow)
     sampler2D g_dirLightShadowMap;
     fixed4x4 g_worldToDirLightShadowMatrix[MAX_DIR_LIGHT_SHADOW_COUNT * MAX_CASCADE_COUNT];
-    // x: strength
+    // x: strength, y: normalBias
     fixed4 g_dirLightShadowDataPacked[MAX_DIR_LIGHT_SHADOW_COUNT];
     // xyz: positon, w: r ^ 2 
     fixed4 g_cascadeBoundingSphere[MAX_CASCADE_COUNT];
@@ -64,7 +64,7 @@ fixed get_shadow_attenuation(int light_index, fixed4 pos_ws, fixed3 N)
     }
     // sts: shadow texture space
     // along normal direction bias texel size
-    fixed4 bias = fixed4(normalize(N) * g_cascadeDataPacked[level].y, 0);
+    fixed4 bias = fixed4(normalize(N) * g_cascadeDataPacked[level].y * g_dirLightShadowDataPacked[light_index].y, 0);
     // fixed4 bias = 0;
     fixed4 pos_sts = mul(g_worldToDirLightShadowMatrix[light_index * MAX_CASCADE_COUNT + level], pos_ws + bias);
     pos_sts.xyz /= pos_sts.w;

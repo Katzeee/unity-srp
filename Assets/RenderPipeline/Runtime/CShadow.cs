@@ -41,6 +41,7 @@ public class CShadow
         public int index;
         public float shadowStrength;
         public float slopeScaleBias;
+        public float normalBias;
     }
 
     private SShadowDirLight[] m_shadowDirLights = new SShadowDirLight[c_maxDirLightShadowCount];
@@ -60,7 +61,12 @@ public class CShadow
             light.shadowStrength > 0f && m_cullingRes.GetShadowCasterBounds(lightIndex, out Bounds b))
         {
             m_shadowDirLights[m_dirLightShadowCount] = new SShadowDirLight
-                { index = lightIndex, shadowStrength = light.shadowStrength, slopeScaleBias = light.shadowBias };
+            {
+                index = lightIndex, 
+                shadowStrength = light.shadowStrength, 
+                slopeScaleBias = light.shadowBias,
+                normalBias = light.shadowNormalBias
+            };
             m_dirLightShadowCount++;
         }
     }
@@ -129,6 +135,7 @@ public class CShadow
     {
         var light = m_shadowDirLights[lightIndex];
         s_dirLightShadowDataPacked[lightIndex].x = light.shadowStrength;
+        s_dirLightShadowDataPacked[lightIndex].y = light.normalBias;
         var shadowSettings =
             new ShadowDrawingSettings(m_cullingRes, light.index, BatchCullingProjectionType.Orthographic);
         m_cullingRes.ComputeDirectionalShadowMatricesAndCullingPrimitives(light.index, cascadeIndex,
@@ -154,10 +161,10 @@ public class CShadow
         m_commandBuffer.SetViewport(viewPort);
         m_commandBuffer.SetViewProjectionMatrices(viewMatrix, projMatrix);
         s_worldToDirLightShadowMatrix[blockIndex] = projMatrix * viewMatrix;
-        // m_commandBuffer.SetGlobalDepthBias(0, light.slopeScaleBias);
+        m_commandBuffer.SetGlobalDepthBias(0, light.slopeScaleBias);
         ExcuteBuffer();
         m_context.DrawShadows(ref shadowSettings);
-        // m_commandBuffer.SetGlobalDepthBias(0, 0);
+        m_commandBuffer.SetGlobalDepthBias(0, 0);
     }
 
     private void ConvertToAtlasMatrix(int blockSize, int lightIndex, int cascadeIndex)
