@@ -10,6 +10,7 @@ public class CustomShaderGUI : ShaderGUI
     private Object[] m_materials;
     private MaterialProperty[] m_properties;
     private bool m_showPresets = true;
+    private bool m_shadowCaster = true;
 
     private bool Clipping
     {
@@ -68,10 +69,13 @@ public class CustomShaderGUI : ShaderGUI
 
     public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] properties)
     {
-        base.OnGUI(materialEditor, properties);
         m_materialEditor = materialEditor;
         m_materials = materialEditor.targets;
         m_properties = properties;
+
+        ShadowCasterPass();
+        base.OnGUI(materialEditor, properties);
+
         m_showPresets = EditorGUILayout.Foldout(m_showPresets, "Presets", true);
         if (m_showPresets)
         {
@@ -82,12 +86,32 @@ public class CustomShaderGUI : ShaderGUI
         }
     }
 
-    bool SetKeyword(string name, bool value)
+    private void ShadowCasterPass()
+    {
+        m_shadowCaster = EditorGUILayout.Toggle("Shadow Caster", m_shadowCaster);
+
+        if (m_shadowCaster)
+        {
+            foreach (Material material in m_materials)
+            {
+                material.SetShaderPassEnabled("ShadowCaster", true);
+            }
+        }
+        else
+        {
+            foreach (Material material in m_materials)
+            {
+                material.SetShaderPassEnabled("ShadowCaster", false);
+            }
+        }
+    }
+
+    private bool SetKeyword(string name, bool value)
     {
         return true;
     }
 
-    bool SetProperty(string name, float value)
+    private bool SetProperty(string name, float value)
     {
         var property = FindProperty(name, m_properties, false);
         if (property != null)
