@@ -4,6 +4,8 @@ Shader "CustomShaders/Unlit"
     {
         _BaseColor("Color", Color) = (1.0, 1.0, 1.0, 1.0)
         _MainTex("Texture", 2D) = "white" {}
+        [NoScaleOffset] _EmissionMap("Emission", 2D) = "white" {}
+        [HDR] _EmissionColor("Emission", Color) = (0.0, 0.0, 0.0, 0.0)
         [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlend("Src Blend", Float) = 1
         [Enum(UnityEngine.Rendering.BlendMode)] _DstBlend("Dst Blend", Float) = 0
         [Enum(Off, 0, On, 1)] _ZWrite("Z Write", Float) = 1
@@ -30,7 +32,7 @@ Shader "CustomShaders/Unlit"
             #pragma vertex vert
             #pragma fragment frag
 
-            #include "UnityCG.cginc"
+            #include "Common.hlsl"
 
             struct appdata
             {
@@ -46,12 +48,15 @@ Shader "CustomShaders/Unlit"
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
+            TEXTURE2D(_EmissionMap);
+            SAMPLER(sampler_EmissionMap);
+            
             sampler2D _MainTex;
-
             UNITY_INSTANCING_BUFFER_START(UnityPerMaterial)
             UNITY_DEFINE_INSTANCED_PROP(float4, _MainTex_ST)
             UNITY_DEFINE_INSTANCED_PROP(float4, _BaseColor)
             UNITY_DEFINE_INSTANCED_PROP(float, _CutOff)
+            UNITY_DEFINE_INSTANCED_PROP(float4, _EmissionColor)
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
 
             v2f vert(appdata v)
@@ -73,7 +78,9 @@ Shader "CustomShaders/Unlit"
                 #if defined(_CLIPPING)
                 clip(col.a - UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _CutOff));
                 #endif
-                return col;
+                fixed4 emission = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, i.uv);
+                emission *= UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _EmissionColor);
+                return col + fixed4(emission.rgb, 0.0);
             }
             ENDCG
         }
@@ -92,7 +99,7 @@ Shader "CustomShaders/Unlit"
             CGPROGRAM
             #pragma target 3.5
             #pragma multi_compile_instancing
-            #pragma shader_feature _ _SHADOWCLIPMODE_CLIP _SHADOWCLIPMODE_DITHER 
+            #pragma shader_feature _ _SHADOWCLIPMODE_CLIP _SHADOWCLIPMODE_DITHER
             #pragma shader_feature _PREMUL_ALPHA
             #pragma vertex vert
             #pragma fragment frag
@@ -101,11 +108,11 @@ Shader "CustomShaders/Unlit"
 
             sampler2D _MainTex;
             UNITY_INSTANCING_BUFFER_START(UnityPerMaterial)
-            UNITY_DEFINE_INSTANCED_PROP(float4, _BaseColor)
-            UNITY_DEFINE_INSTANCED_PROP(float4, _MainTex_ST)
-            UNITY_DEFINE_INSTANCED_PROP(float, _Metallic)
-            UNITY_DEFINE_INSTANCED_PROP(float, _Roughness)
-            UNITY_DEFINE_INSTANCED_PROP(float, _CutOff)
+                UNITY_DEFINE_INSTANCED_PROP(float4, _BaseColor)
+                UNITY_DEFINE_INSTANCED_PROP(float4, _MainTex_ST)
+                UNITY_DEFINE_INSTANCED_PROP(float, _Metallic)
+                UNITY_DEFINE_INSTANCED_PROP(float, _Roughness)
+                UNITY_DEFINE_INSTANCED_PROP(float, _CutOff)
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
 
             struct v2f

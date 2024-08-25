@@ -7,11 +7,12 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Unlit
-  m_Shader: {fileID: 4800000, guid: a8c99aed0e85def4db3eeaff10dae497, type: 3}
+  m_Name: Lit
+  m_Shader: {fileID: 4800000, guid: 233f4e48ee5228446889da589a8a41ed, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
+  m_ValidKeywords:
+  - _RECEIVE_SHADOW
   m_InvalidKeywords:
   - _SHADOWCLIPMODE_OFF
   m_LightmapFlags: 4
@@ -72,19 +73,21 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _Metallic: 0
+    - _Metallic: 0.153
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
+    - _PremulAlpha: 0
+    - _ReceiveShadow: 1
+    - _Roughness: 0.433
     - _ShadowClipMode: 0
-    - _ShadowClipping: 0
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 0.504717, g: 1, b: 0.5333537, a: 1}
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []
