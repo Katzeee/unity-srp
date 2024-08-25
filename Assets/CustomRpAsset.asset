@@ -12,9 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0eaa841f31addd8449db2a5b5798ed32, type: 3}
   m_Name: CustomRpAsset
   m_EditorClassIdentifier: 
-  useDynamicBatching: 1
-  useGpuInstancing: 1
-  useSrpBatcher: 1
+  commonPipelineSettings:
+    useDynamicBatching: 1
+    useGpuInstancing: 1
+    useSrpBatcher: 1
+    useHdr: 1
   shadowSettings:
     maxDistance: 15
     fadeDistance: 0.1
@@ -24,3 +26,4 @@ MonoBehaviour:
       cascadeCount: 4
       filterMode: 2
       cascadeBlendMode: 2
+  postFxSettings: {fileID: 11400000, guid: 65c6d45850030fc4bbd6b0e67d354f6a, type: 2}

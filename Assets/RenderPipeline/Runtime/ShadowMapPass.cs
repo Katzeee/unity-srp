@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.Rendering;
 
-public class CShadow
+public class ShadowMapPass
 {
     private const string c_commandBufferName = "Shadow";
 
@@ -17,7 +17,7 @@ public class CShadow
     private const int c_maxDirLightShadowCount = 4;
     private const int c_maxCascadeCount = 4;
     private int m_dirLightShadowCount = 0;
-
+    
     private static readonly string[] s_filterModeKey =
     {
         "_DIR_LIGHT_PCF2x2",
@@ -137,6 +137,7 @@ public class CShadow
         int blockLength = textureSize / blockSize;
         for (int i = 0; i < m_dirLightShadowCount; i++)
         {
+            // FIXME: use cascadeCount not maxCascadeCount
             for (int j = 0; j < c_maxCascadeCount; j++)
             {
                 RenderDirLightShadow(i, j, blockSize, blockLength);

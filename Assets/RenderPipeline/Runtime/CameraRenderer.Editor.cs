@@ -6,13 +6,15 @@ using UnityEngine.Rendering;
 public partial class CameraRenderer
 {
     private partial void DrawUnsupportedShader();
-    private partial void DrawGizmos();
+    private partial void DrawGizmosAfterFx();
+    private partial void DrawGizmosBeforeFx();
     private partial void PrepareForSceneWindow();
     private partial void PrepareCommandBuffer();
-    
+
 #if UNITY_EDITOR
     private string SampleName { get; set; }
-    private static readonly string[] s_unsupportedShaderIds = new string[] 
+
+    private static readonly string[] s_unsupportedShaderIds = new string[]
     {
         "Always",
         "ForwardBase",
@@ -21,15 +23,16 @@ public partial class CameraRenderer
         "VertexLMRGBM",
         "VertexLM"
     };
-    
+
     private static Shader s_errorShader = Shader.Find("Hidden/InternalErrorShader");
-    
+
     private partial void DrawUnsupportedShader()
     {
-        var drawingSettings = new DrawingSettings(new ShaderTagId(s_unsupportedShaderIds[0]), new SortingSettings(m_camera));
+        var drawingSettings =
+            new DrawingSettings(new ShaderTagId(s_unsupportedShaderIds[0]), new SortingSettings(m_camera));
         drawingSettings.overrideShader = s_errorShader;
         for (int i = 1; i < s_unsupportedShaderIds.Length; i++)
-        {   
+        {
             drawingSettings.SetShaderPassName(i, new ShaderTagId(s_unsupportedShaderIds[i]));
         }
 
@@ -37,12 +40,20 @@ public partial class CameraRenderer
         m_context.DrawRenderers(m_cullingRes, ref drawingSettings, ref filteringSettings);
     }
 
-    private partial void DrawGizmos()
+
+    private partial void DrawGizmosAfterFx()
+    {
+        if (Handles.ShouldRenderGizmos())
+        {
+            m_context.DrawGizmos(m_camera, GizmoSubset.PostImageEffects);
+        }
+    }
+
+    private partial void DrawGizmosBeforeFx()
     {
         if (Handles.ShouldRenderGizmos())
         {
             m_context.DrawGizmos(m_camera, GizmoSubset.PreImageEffects);
-            m_context.DrawGizmos(m_camera, GizmoSubset.PostImageEffects);
         }
     }
 
@@ -69,5 +80,4 @@ public partial class CameraRenderer
     private partial void PrepareForSceneWindow() {}
     private partial void PrepareCommandBuffer() {}
 #endif
-    
 }

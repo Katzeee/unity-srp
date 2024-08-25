@@ -8,6 +8,10 @@ public partial class CameraRenderer
     private CullingResults m_cullingRes;
     private CommandBuffer m_commandBuffer = new();
     private Lighting m_lighting = new();
+    private PostFxPass m_postFxPass = new PostFxPass();
+    private static readonly int s_frameBufferId = Shader.PropertyToID("_CameraFrameBuffer");
+
+    private bool m_useHdr;
 
     private static string[] s_supportedRenderIds = new[]
     {
@@ -15,26 +19,31 @@ public partial class CameraRenderer
         "CustomLit",
     };
 
-    public void Render(ScriptableRenderContext context, Camera camera, bool useDynamicBatching, bool useGpuInstancing,
-        ShadowSettings shadowSettings)
+    public void Render(ScriptableRenderContext context, Camera camera, CommonPipelineSettings commonPipelineSettings,
+        ShadowSettings shadowSettings, PostFxSettings postFxSettings)
     {
         m_context = context;
         m_camera = camera;
-        
+        m_useHdr = m_camera.allowHDR && commonPipelineSettings.useHdr;
+
         PrepareCommandBuffer();
         PrepareForSceneWindow();
         Cull(shadowSettings.maxDistance);
         m_commandBuffer.BeginSample(SampleName);
         ExecuteBuffer();
         m_lighting.Setup(m_context, m_cullingRes, shadowSettings);
+        m_postFxPass.Setup(m_context, m_camera, postFxSettings);
         m_commandBuffer.EndSample(SampleName);
         Setup();
-        
-        DrawVisibleGeometry(useDynamicBatching, useGpuInstancing);
+
+        DrawVisibleGeometry(commonPipelineSettings.useDynamicBatching, commonPipelineSettings.useGpuInstancing);
         DrawUnsupportedShader();
-        DrawGizmos();
+        DrawGizmosBeforeFx();
+        m_postFxPass.Render(s_frameBufferId);
+        DrawGizmosAfterFx();
         m_lighting.CleanUp();
-        
+        CleanUp();
+
         Submit();
     }
 
@@ -55,11 +64,20 @@ public partial class CameraRenderer
     private void Setup()
     {
         m_context.SetupCameraProperties(m_camera);
+        m_commandBuffer.GetTemporaryRT(s_frameBufferId, m_camera.pixelWidth, m_camera.pixelHeight, 32,
+            FilterMode.Bilinear, m_useHdr ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default);
+        m_commandBuffer.SetRenderTarget(s_frameBufferId, RenderBufferLoadAction.DontCare,
+            RenderBufferStoreAction.Store);
         CameraClearFlags clearFlags = m_camera.clearFlags;
         CCommonUtils.ClearFrameBuffer(m_commandBuffer, clearFlags, Color.clear);
         // QUESTION: must excute buffer after begin sample?
         m_commandBuffer.BeginSample(SampleName);
         ExecuteBuffer();
+    }
+
+    private void CleanUp()
+    {
+        m_commandBuffer.ReleaseTemporaryRT(s_frameBufferId);
     }
 
     private void ExecuteBuffer()

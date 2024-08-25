@@ -17,15 +17,15 @@ public class Lighting
     private static Vector4[] s_dirLightColors = new Vector4[c_maxDirLightCount];
     private static Vector4[] s_dirLightDirs = new Vector4[c_maxDirLightCount];
 
-    private CShadow m_shadow = new();
+    private ShadowMapPass m_shadowMapPass = new();
     public void Setup(ScriptableRenderContext context, CullingResults cullingRes, ShadowSettings shadowSettings)
     {
         m_cullingRes = cullingRes;
         // QUESTION: why no excute buffer?
         // m_commandBuffer.BeginSample(c_commandBufferName);
-        m_shadow.Setup(context, cullingRes, shadowSettings);
+        m_shadowMapPass.Setup(context, cullingRes, shadowSettings);
         SetupLights();
-        m_shadow.Render();
+        m_shadowMapPass.Render();
         // m_commandBuffer.EndSample(c_commandBufferName);
         context.ExecuteCommandBuffer(m_commandBuffer);
         m_commandBuffer.Clear();
@@ -55,12 +55,12 @@ public class Lighting
         s_dirLightColors[index] = light.finalColor;
         // z axis is the forward vector of the directional light
         s_dirLightDirs[index] = -light.localToWorldMatrix.GetColumn(2);
-        m_shadow.ReserveDirShadows(light.light, index);
+        m_shadowMapPass.ReserveDirShadows(light.light, index);
     }
 
     public void CleanUp()
     {
-        m_shadow.CleanUp();        
+        m_shadowMapPass.CleanUp();        
     }
 }
 
