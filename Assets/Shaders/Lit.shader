@@ -11,7 +11,7 @@ Shader "CustomShaders/Lit"
         [Enum(Off, 0, On, 1)] _ZWrite("Z Write", Float) = 1
         _CutOff("Alpha Cutoff", Range(0.0, 1.0)) = 0.8
         [Toggle(_CLIPPING)] _Clipping("Alpha Clipping", Float) = 0
-        [Toggle(_SHADOW_CLIPPING)] _ShadowClipping("Shadow Clipping", Float) = 0
+        [KeywordEnum(Off, Clip, Dither)] _ShadowClipMode("Shadow Clip Mode", Float) = 0
         [Enum(UnityEngine.Rendering.CullMode)] _Cull("Cull", Float) = 0
         [Toggle(_PREMUL_ALPHA)] _PremulAlpha("Premultiply Alpha", Float) = 0
         [Toggle(_RECEIVE_SHADOW)] _ReceiveShadow("Receive Shadow", Float) = 1
@@ -139,13 +139,12 @@ Shader "CustomShaders/Lit"
             CGPROGRAM
             #pragma target 3.5
             #pragma multi_compile_instancing
-            #pragma shader_feature _SHADOW_CLIPPING
+            #pragma shader_feature _ _SHADOWCLIPMODE_CLIP _SHADOWCLIPMODE_DITHER 
             #pragma shader_feature _PREMUL_ALPHA
             #pragma vertex vert
             #pragma fragment frag
 
-
-            #include "UnityCG.cginc"
+            #include "Common.hlsl"
 
             sampler2D _MainTex;
             UNITY_INSTANCING_BUFFER_START(UnityPerMaterial)
@@ -180,8 +179,10 @@ Shader "CustomShaders/Lit"
             {
                 UNITY_SETUP_INSTANCE_ID(i);
                 fixed4 albedo = tex2D(_MainTex, i.uv) * UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _BaseColor);
-                #ifdef _SHADOW_CLIPPING
+                #ifdef _SHADOWCLIPMODE_CLIP
                 clip(albedo.a - UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _CutOff));
+                #elif defined(_SHADOWCLIPMODE_DITHER)
+                clip(albedo.a - InterleavedGradientNoise(i.pos.xy, 0));
                 #endif
             }
             ENDCG

@@ -15,18 +15,22 @@ public class CustomShaderGUI : ShaderGUI
     {
         set => SetProperty("_Clipping", value ? 1.0f : 0.0f);
     }
+
     private bool ZWrite
     {
         set => SetProperty("_ZWrite", value ? 1.0f : 0.0f);
     }
+
     private bool PremulAlpha
     {
         set => SetProperty("_PremulAlpha", value ? 1.0f : 0.0f);
     }
+
     private BlendMode SrcBlend
     {
         set => SetProperty("_SrcBlend", (float)value);
     }
+
     private BlendMode DstBlend
     {
         set => SetProperty("_DstBlend", (float)value);
@@ -43,6 +47,25 @@ public class CustomShaderGUI : ShaderGUI
         }
     }
 
+    private enum ShadowClipMode
+    {
+        Off,
+        Clip,
+        Dither,
+    }
+
+    private ShadowClipMode m_shadowClipMode
+    {
+        set
+        {
+            if (SetProperty("_ShadowClipMode", (float)value))
+            {
+                SetKeyword("_SHADOW_CLIP", value == ShadowClipMode.Clip);
+                SetKeyword("_SHADOW_DITHER", value == ShadowClipMode.Dither);
+            }
+        }
+    }
+
     public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] properties)
     {
         base.OnGUI(materialEditor, properties);
@@ -52,7 +75,7 @@ public class CustomShaderGUI : ShaderGUI
         m_showPresets = EditorGUILayout.Foldout(m_showPresets, "Presets", true);
         if (m_showPresets)
         {
-            OpaquePreset(); 
+            OpaquePreset();
             FadePreset();
             TransparentPreset();
             ShowDebugInfo();
@@ -63,7 +86,7 @@ public class CustomShaderGUI : ShaderGUI
     {
         return true;
     }
-    
+
     bool SetProperty(string name, float value)
     {
         var property = FindProperty(name, m_properties, false);
@@ -72,6 +95,7 @@ public class CustomShaderGUI : ShaderGUI
             property.floatValue = value;
             return true;
         }
+
         return false;
     }
 
@@ -101,15 +125,15 @@ public class CustomShaderGUI : ShaderGUI
     // with premul alpha false
     void FadePreset()
     {
-         if (PresetButton("Fade"))
-         {
-             ZWrite = false;
-             Clipping = false;
-             PremulAlpha = false;
-             SrcBlend = BlendMode.SrcAlpha;
-             DstBlend = BlendMode.OneMinusSrcAlpha;
-             RenderQueueNum = RenderQueue.Transparent;
-         }       
+        if (PresetButton("Fade"))
+        {
+            ZWrite = false;
+            Clipping = false;
+            PremulAlpha = false;
+            SrcBlend = BlendMode.SrcAlpha;
+            DstBlend = BlendMode.OneMinusSrcAlpha;
+            RenderQueueNum = RenderQueue.Transparent;
+        }
     }
 
     // with premul alpha true
@@ -125,7 +149,7 @@ public class CustomShaderGUI : ShaderGUI
             RenderQueueNum = RenderQueue.Transparent;
         }
     }
-    
+
     void ShowDebugInfo()
     {
         StringBuilder builder = new();
@@ -135,6 +159,7 @@ public class CustomShaderGUI : ShaderGUI
             {
                 builder.AppendFormat("{0} ", material.name);
             }
+
             Debug.Log(builder.ToString());
             builder.Clear();
 
@@ -142,8 +167,8 @@ public class CustomShaderGUI : ShaderGUI
             {
                 builder.AppendFormat("{0} ", property.name);
             }
+
             Debug.Log(builder.ToString());
         }
     }
-
 }
