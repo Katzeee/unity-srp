@@ -104,15 +104,24 @@ fixed fade_shadow_strength(fixed d, fixed m, fixed f)
 }
 
 // CALCULATE SHADOW ATTENUATION FOR EACH LIGHT SEPARATELY, NOT **AVERAGE** THEM!!!
-fixed get_shadow_attenuation(int light_index, fixed4 pos_ws, fixed3 N)
+fixed get_shadow_attenuation(int light_index, FragValue f)
 {
-    fixed depth = -UnityWorldToViewPos(pos_ws).z;
-    int level = get_cascade_level(pos_ws);
+    fixed depth = -UnityWorldToViewPos(f.pos_ws).z;
+    int level = get_cascade_level(f.pos_ws);
     if (level == MAX_CASCADE_COUNT)
     {
         return 1.0;
     }
-    fixed4 pos_sts = get_pos_sts(pos_ws, level, light_index, N);
+    fixed blend_ration = fade_shadow_strength(
+        distance_squared(f.pos_ws, g_cascadeBoundingSphere[level]),
+        1.0f / g_cascadeBoundingSphere[level].w, g_shadowFadeDistancePacked.z);
+    #ifdef _CASCADE_BLEND_DITHER
+    if (blend_ration < f.dither && level < MAX_CASCADE_COUNT - 1)
+    {
+        level += 1;
+    }
+    #endif
+    fixed4 pos_sts = get_pos_sts(f.pos_ws, level, light_index, f.N);
     fixed shadow_strength = g_dirLightShadowDataPacked[light_index].x;
     // max distance fade: (1 - depth / maxShadowDistance) / fadeDistance
     shadow_strength *= fade_shadow_strength(depth, g_shadowFadeDistancePacked.x, g_shadowFadeDistancePacked.y);
@@ -121,20 +130,19 @@ fixed get_shadow_attenuation(int light_index, fixed4 pos_ws, fixed3 N)
     {
         // last cascade fade: (1 - d ^ 2 / r ^ 2) / (1 - (1 - fadeCascade) ^ 2)
         shadow_strength *= fade_shadow_strength(
-            distance_squared(pos_ws, g_cascadeBoundingSphere[MAX_CASCADE_COUNT - 1]),
+            distance_squared(f.pos_ws, g_cascadeBoundingSphere[MAX_CASCADE_COUNT - 1]),
             1.0f / g_cascadeBoundingSphere[MAX_CASCADE_COUNT - 1].w, g_shadowFadeDistancePacked.z);
     }
+    #ifdef _CASCADE_BLEND_SOFT
     else
     {
-        fixed blend_ration = fade_shadow_strength(
-            distance_squared(pos_ws, g_cascadeBoundingSphere[level]),
-            1.0f / g_cascadeBoundingSphere[level].w, g_shadowFadeDistancePacked.z);
         if (blend_ration < 1.0)
         {
-            pos_sts = get_pos_sts(pos_ws, level + 1, light_index, N);
+            pos_sts = get_pos_sts(f.pos_ws, level + 1, light_index, f.N);
             shadow_attenuation = lerp(sample_shadow(pos_sts), shadow_attenuation, blend_ration);
         }
     }
+    #endif
     shadow_attenuation = lerp(1.0f, shadow_attenuation, shadow_strength);
     return shadow_attenuation;
 }

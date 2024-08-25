@@ -18,4 +18,19 @@ public class CCommonUtils
             commandBuffer.ClearRenderTarget(true, true, Color.black);
         }
     }
+
+    public static void SetKeywords(CommandBuffer commandBuffer, string[] keywords, int index)
+    {
+        for (int i = 0; i < keywords.Length; ++i)
+        {
+            if (i == index - 1)
+            {
+                commandBuffer.EnableShaderKeyword(keywords[i]);
+            }
+            else
+            {
+                commandBuffer.DisableShaderKeyword(keywords[i]);
+            }
+        }
+    }
 }

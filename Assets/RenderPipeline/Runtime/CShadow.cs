@@ -18,11 +18,16 @@ public class CShadow
     private const int c_maxCascadeCount = 4;
     private int m_dirLightShadowCount = 0;
 
-    private static readonly string[] filterModeKey =
+    private static readonly string[] s_filterModeKey =
     {
-        "_DIR_LIGHT_HARD_SHADOW",
         "_DIR_LIGHT_PCF2x2",
         "_DIR_LIGHT_PCF3x3",
+    };
+
+    private static readonly string[] s_blendModeKey =
+    {
+        "_CASCADE_BLEND_SOFT",
+        "_CASCADE_BLEND_DITHER",
     };
 
     // shader variable id
@@ -104,20 +109,10 @@ public class CShadow
                 1.0f / (1.0f - (1.0f - m_shadowSettings.fadeCascade) * (1.0f - m_shadowSettings.fadeCascade))));
     }
 
-    private void SetFilterMode()
+    private void SetKeywords()
     {
-        int index = (int)m_shadowSettings.dirLightShadow.filterMode;
-        for (int i = 0; i < filterModeKey.Length; ++i)
-        {
-            if (i == index)
-            {
-                m_commandBuffer.EnableShaderKeyword(filterModeKey[i]);
-            }
-            else
-            {
-                m_commandBuffer.DisableShaderKeyword(filterModeKey[i]);
-            }
-        }
+        CCommonUtils.SetKeywords(m_commandBuffer, s_filterModeKey, (int)m_shadowSettings.dirLightShadow.filterMode);
+        CCommonUtils.SetKeywords(m_commandBuffer, s_blendModeKey, (int)m_shadowSettings.dirLightShadow.cascadeBlendMode);
     }
 
     private void RenderDirLightShadows()
@@ -150,7 +145,7 @@ public class CShadow
         }
 
         SendDataToShader();
-        SetFilterMode();
+        SetKeywords();
         m_commandBuffer.EndSample(c_commandBufferName);
         ExcuteBuffer();
     }

@@ -19,6 +19,8 @@ struct FragValue
     fixed NoH;
     fixed3 H;
     fixed HoV;
+    fixed4 pos_ws;
+    fixed dither;
 };
 
 #endif
