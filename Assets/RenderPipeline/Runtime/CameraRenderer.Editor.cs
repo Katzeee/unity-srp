@@ -6,7 +6,7 @@ using UnityEngine.Rendering;
 public partial class CameraRenderer
 {
 #if UNITY_EDITOR
-    private string SampleName { get; set; }
+    protected string SampleName { get; set; }
 
     private static readonly string[] s_unsupportedShaderIds = new string[]
     {
@@ -20,7 +20,7 @@ public partial class CameraRenderer
 
     private static Shader s_errorShader = Shader.Find("Hidden/InternalErrorShader");
 
-    private void DrawUnsupportedShader()
+    protected void DrawUnsupportedShader()
     {
         var drawingSettings =
             new DrawingSettings(new ShaderTagId(s_unsupportedShaderIds[0]), new SortingSettings(m_camera));
@@ -34,7 +34,7 @@ public partial class CameraRenderer
         m_context.DrawRenderers(m_cullingRes, ref drawingSettings, ref filteringSettings);
     }
 
-    private void DrawGizmosBeforeFx()
+    protected void DrawGizmosBeforeFx()
     {
         if (Handles.ShouldRenderGizmos())
         {
@@ -42,7 +42,7 @@ public partial class CameraRenderer
         }
     }
 
-    private void DrawGizmosAfterFx()
+    protected void DrawGizmosAfterFx()
     {
         if (Handles.ShouldRenderGizmos())
         {
@@ -59,7 +59,7 @@ public partial class CameraRenderer
         }
     }
 
-    private void PrepareCommandBuffer()
+    private void PrepareProfileTag()
     {
         Profiler.BeginSample("Editor Only");
         m_commandBuffer.name = SampleName = m_camera.name;
@@ -68,9 +68,9 @@ public partial class CameraRenderer
 #else
     const string SampleName = "Camera Renderer";
 
-    private void DrawUnsupportedShader() {}
-    private void DrawGizmos() {}
-    private void PrepareForSceneWindow() {}
-    private void PrepareCommandBuffer() {}
+    protected void DrawUnsupportedShader() {}
+    protected void DrawGizmos() {}
+    protected void PrepareForSceneWindow() {}
+    protected void PrepareProfileTag() {}
 #endif
 }

@@ -12,17 +12,15 @@ public class CommonPipelineSettings
 
 public class CustomRenderPipeline : RenderPipeline
 {
-    private CameraRenderer m_renderer = new CameraRenderer();
-    private ShadowSettings m_shadowSettings;
-    private CommonPipelineSettings m_commonPipelineSettings;
-    private PostFxSettings m_postFxSettings;
+    private CameraRenderer m_renderer = new ForwardRenderer();
+    private PipelineSettings m_pipelineSettings = new();
 
     public CustomRenderPipeline(CommonPipelineSettings commonPipelineSettings, ShadowSettings shadowSettings,
         PostFxSettings postFxSettings)
     {
-        m_commonPipelineSettings = commonPipelineSettings;
-        m_shadowSettings = shadowSettings;
-        m_postFxSettings = postFxSettings;
+        m_pipelineSettings.commonPipelineSettings = commonPipelineSettings;
+        m_pipelineSettings.shadowSettings = shadowSettings;
+        m_pipelineSettings.postFxSettings = postFxSettings;
         GraphicsSettings.useScriptableRenderPipelineBatching = commonPipelineSettings.useSrpBatcher;
         GraphicsSettings.lightsUseLinearIntensity = true;
     }
@@ -31,7 +29,7 @@ public class CustomRenderPipeline : RenderPipeline
     {
         foreach (var camera in cameras)
         {
-            m_renderer.Render(context, camera, m_commonPipelineSettings, m_shadowSettings, m_postFxSettings);
+            m_renderer.Render(context, camera, m_pipelineSettings);
         }
     }
 }

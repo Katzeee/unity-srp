@@ -1,50 +1,56 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public partial class CameraRenderer
+public class PipelineSettings
 {
-    private ScriptableRenderContext m_context;
-    private Camera m_camera;
-    private CullingResults m_cullingRes;
-    private CommandBuffer m_commandBuffer = new();
-    private Lighting m_lighting = new();
-    private PostFxPass m_postFxPass = new PostFxPass();
-    private static readonly int s_frameBufferId = Shader.PropertyToID("_CameraFrameBuffer");
+    public CommonPipelineSettings commonPipelineSettings;
+    public ShadowSettings shadowSettings;
+    public PostFxSettings postFxSettings;
+}
 
-    private bool m_useHdr;
+public abstract partial class CameraRenderer
+{
+    protected ScriptableRenderContext m_context;
+    protected Camera m_camera;
+    protected CullingResults m_cullingRes;
+    protected CommandBuffer m_commandBuffer = new();
+    protected PipelineSettings m_pipelineSettings;
+    protected static readonly int s_frameBufferId = Shader.PropertyToID("_CameraFrameBuffer");
+    protected bool m_useHdr;
 
-    private static string[] s_supportedRenderIds = new[]
+    protected static string[] s_supportedRenderIds = new[]
     {
         "SRPDefaultUnlit",
         "CustomLit",
     };
 
-    public void Render(ScriptableRenderContext context, Camera camera, CommonPipelineSettings commonPipelineSettings,
-        ShadowSettings shadowSettings, PostFxSettings postFxSettings)
+    protected virtual bool BeforeRender()
+    {
+        PrepareProfileTag();
+        PrepareForSceneWindow();
+        return Cull(m_pipelineSettings.shadowSettings.maxDistance);
+    }
+
+    protected virtual void OnRender()
+    {
+    }
+
+    protected virtual void AfterRender()
+    {
+    }
+
+    public void Render(ScriptableRenderContext context, Camera camera, PipelineSettings pipelineSettings)
     {
         m_context = context;
         m_camera = camera;
-        m_useHdr = m_camera.allowHDR && commonPipelineSettings.useHdr;
+        m_pipelineSettings = pipelineSettings;
+        m_useHdr = m_camera.allowHDR && m_pipelineSettings.commonPipelineSettings.useHdr;
 
-        PrepareCommandBuffer();
-        PrepareForSceneWindow();
-        Cull(shadowSettings.maxDistance);
-        m_commandBuffer.BeginSample(SampleName);
-        ExecuteBuffer();
-        m_lighting.Setup(m_context, m_cullingRes, shadowSettings);
-        m_postFxPass.Setup(m_context, m_camera, postFxSettings);
-        m_commandBuffer.EndSample(SampleName);
-        Setup();
-
-        DrawVisibleGeometry(commonPipelineSettings.useDynamicBatching, commonPipelineSettings.useGpuInstancing);
-        DrawUnsupportedShader();
-        DrawGizmosBeforeFx();
-        m_postFxPass.Render(s_frameBufferId);
-        DrawGizmosAfterFx();
-        m_lighting.CleanUp();
-        CleanUp();
-
-        Submit();
+        if (BeforeRender())
+        {
+            OnRender();
+            AfterRender();
+        }
     }
 
     private bool Cull(float maxShadowDistance)
@@ -60,70 +66,16 @@ public partial class CameraRenderer
         return false;
     }
 
-    // before drawing, clean the framebuffer
-    private void Setup()
-    {
-        m_context.SetupCameraProperties(m_camera);
-        if (m_postFxPass.IsActive)
-        {
-            m_commandBuffer.GetTemporaryRT(s_frameBufferId, m_camera.pixelWidth, m_camera.pixelHeight, 32,
-                FilterMode.Bilinear, m_useHdr ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default);
-            m_commandBuffer.SetRenderTarget(s_frameBufferId, RenderBufferLoadAction.DontCare,
-                RenderBufferStoreAction.Store);
-        }
-        CameraClearFlags clearFlags = m_camera.clearFlags;
-        CCommonUtils.ClearFrameBuffer(m_commandBuffer, clearFlags, Color.clear);
-        // QUESTION: must excute buffer after begin sample?
-        m_commandBuffer.BeginSample(SampleName);
-        ExecuteBuffer();
-    }
-
-    private void CleanUp()
-    {
-        if (m_postFxPass.IsActive)
-        {
-            m_commandBuffer.ReleaseTemporaryRT(s_frameBufferId);
-        }
-    }
-
-    private void ExecuteBuffer()
+    protected void ExecuteBuffer()
     {
         m_context.ExecuteCommandBuffer(m_commandBuffer);
         m_commandBuffer.Clear();
     }
 
-    private void Submit()
+    protected void Submit()
     {
         m_commandBuffer.EndSample(SampleName);
         ExecuteBuffer();
         m_context.Submit();
-    }
-
-    private void DrawVisibleGeometry(bool useDynamicBatching, bool useGpuInstacing)
-    {
-        var sortingSettings = new SortingSettings(m_camera)
-        {
-            criteria = SortingCriteria.CommonOpaque
-        };
-        var drawingSettings = new DrawingSettings(new ShaderTagId(s_supportedRenderIds[0]), sortingSettings)
-        {
-            enableInstancing = useGpuInstacing,
-            enableDynamicBatching = useDynamicBatching
-        };
-        for (int i = 1; i < s_supportedRenderIds.Length; i++)
-        {
-            drawingSettings.SetShaderPassName(i, new ShaderTagId(s_supportedRenderIds[i]));
-        }
-
-        var filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
-        // draw opaque
-        m_context.DrawRenderers(m_cullingRes, ref drawingSettings, ref filteringSettings);
-        // draw skybox
-        m_context.DrawSkybox(m_camera);
-        // draw transparent
-        sortingSettings.criteria = SortingCriteria.CommonTransparent;
-        drawingSettings.sortingSettings = sortingSettings;
-        filteringSettings.renderQueueRange = RenderQueueRange.transparent;
-        m_context.DrawRenderers(m_cullingRes, ref drawingSettings, ref filteringSettings);
     }
 }
