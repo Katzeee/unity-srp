@@ -64,10 +64,13 @@ public partial class CameraRenderer
     private void Setup()
     {
         m_context.SetupCameraProperties(m_camera);
-        m_commandBuffer.GetTemporaryRT(s_frameBufferId, m_camera.pixelWidth, m_camera.pixelHeight, 32,
-            FilterMode.Bilinear, m_useHdr ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default);
-        m_commandBuffer.SetRenderTarget(s_frameBufferId, RenderBufferLoadAction.DontCare,
-            RenderBufferStoreAction.Store);
+        if (m_postFxPass.IsActive)
+        {
+            m_commandBuffer.GetTemporaryRT(s_frameBufferId, m_camera.pixelWidth, m_camera.pixelHeight, 32,
+                FilterMode.Bilinear, m_useHdr ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default);
+            m_commandBuffer.SetRenderTarget(s_frameBufferId, RenderBufferLoadAction.DontCare,
+                RenderBufferStoreAction.Store);
+        }
         CameraClearFlags clearFlags = m_camera.clearFlags;
         CCommonUtils.ClearFrameBuffer(m_commandBuffer, clearFlags, Color.clear);
         // QUESTION: must excute buffer after begin sample?
@@ -77,7 +80,10 @@ public partial class CameraRenderer
 
     private void CleanUp()
     {
-        m_commandBuffer.ReleaseTemporaryRT(s_frameBufferId);
+        if (m_postFxPass.IsActive)
+        {
+            m_commandBuffer.ReleaseTemporaryRT(s_frameBufferId);
+        }
     }
 
     private void ExecuteBuffer()

@@ -1,8 +1,7 @@
-﻿using UnityEditor;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Rendering;
 
-public class PostFxPass
+public partial class PostFxPass
 {
     private enum PassName
     {
@@ -21,6 +20,11 @@ public class PostFxPass
     private PostFxSettings m_postFxSettings;
     private static readonly int s_fxSrcId = Shader.PropertyToID("g_PostFxSrc");
 
+    public bool IsActive
+    {
+        get => m_postFxSettings != null;
+    }
+
     public void Setup(ScriptableRenderContext context, Camera camera, PostFxSettings postFxSettings)
     {
         m_context = context;
@@ -30,14 +34,6 @@ public class PostFxPass
         ApplySceneViewState();
     }
 
-    private void ApplySceneViewState()
-    {
-        if (m_camera.cameraType == CameraType.SceneView &&
-            !SceneView.currentDrawingSceneView.sceneViewState.showImageEffects)
-        {
-            m_postFxSettings = null;
-        }
-    }
 
     private void Draw(RenderTargetIdentifier from, RenderTargetIdentifier to, PassName passName)
     {
@@ -49,9 +45,11 @@ public class PostFxPass
 
     public void Render(int srcRtId)
     {
-        // m_commandBuffer.Blit(sourceId, BuiltinRenderTextureType.CameraTarget);
-        Draw(srcRtId, BuiltinRenderTextureType.CameraTarget, PassName.Copy);
-        m_context.ExecuteCommandBuffer(m_commandBuffer);
-        m_commandBuffer.Clear();
+        if (IsActive)
+        {
+            Draw(srcRtId, BuiltinRenderTextureType.CameraTarget, PassName.Copy);
+            m_context.ExecuteCommandBuffer(m_commandBuffer);
+            m_commandBuffer.Clear();
+        }
     }
 }

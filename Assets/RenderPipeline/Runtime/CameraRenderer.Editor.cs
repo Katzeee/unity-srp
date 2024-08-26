@@ -5,12 +5,6 @@ using UnityEngine.Rendering;
 
 public partial class CameraRenderer
 {
-    private partial void DrawUnsupportedShader();
-    private partial void DrawGizmosAfterFx();
-    private partial void DrawGizmosBeforeFx();
-    private partial void PrepareForSceneWindow();
-    private partial void PrepareCommandBuffer();
-
 #if UNITY_EDITOR
     private string SampleName { get; set; }
 
@@ -26,7 +20,7 @@ public partial class CameraRenderer
 
     private static Shader s_errorShader = Shader.Find("Hidden/InternalErrorShader");
 
-    private partial void DrawUnsupportedShader()
+    private void DrawUnsupportedShader()
     {
         var drawingSettings =
             new DrawingSettings(new ShaderTagId(s_unsupportedShaderIds[0]), new SortingSettings(m_camera));
@@ -40,16 +34,7 @@ public partial class CameraRenderer
         m_context.DrawRenderers(m_cullingRes, ref drawingSettings, ref filteringSettings);
     }
 
-
-    private partial void DrawGizmosAfterFx()
-    {
-        if (Handles.ShouldRenderGizmos())
-        {
-            m_context.DrawGizmos(m_camera, GizmoSubset.PostImageEffects);
-        }
-    }
-
-    private partial void DrawGizmosBeforeFx()
+    private void DrawGizmosBeforeFx()
     {
         if (Handles.ShouldRenderGizmos())
         {
@@ -57,7 +42,15 @@ public partial class CameraRenderer
         }
     }
 
-    private partial void PrepareForSceneWindow()
+    private void DrawGizmosAfterFx()
+    {
+        if (Handles.ShouldRenderGizmos())
+        {
+            m_context.DrawGizmos(m_camera, GizmoSubset.PostImageEffects);
+        }
+    }
+
+    private void PrepareForSceneWindow()
     {
         if (m_camera.cameraType == CameraType.SceneView)
         {
@@ -66,7 +59,7 @@ public partial class CameraRenderer
         }
     }
 
-    private partial void PrepareCommandBuffer()
+    private void PrepareCommandBuffer()
     {
         Profiler.BeginSample("Editor Only");
         m_commandBuffer.name = SampleName = m_camera.name;
@@ -75,9 +68,9 @@ public partial class CameraRenderer
 #else
     const string SampleName = "Camera Renderer";
 
-    private partial void DrawUnsupportedShader() {}
-    private partial void DrawGizmos() {}
-    private partial void PrepareForSceneWindow() {}
-    private partial void PrepareCommandBuffer() {}
+    private void DrawUnsupportedShader() {}
+    private void DrawGizmos() {}
+    private void PrepareForSceneWindow() {}
+    private void PrepareCommandBuffer() {}
 #endif
 }
