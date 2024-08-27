@@ -5,7 +5,7 @@ public class ForwardRenderer : CameraRenderer
 {
     protected Lighting m_lighting = new();
     protected PostFxPass m_postFxPass = new PostFxPass();
-    protected ComputerShaderPass m_computePass = new();
+    protected ComputeBlit m_computeBlit = new();
 
     protected override bool BeforeRender()
     {
@@ -16,7 +16,7 @@ public class ForwardRenderer : CameraRenderer
             m_lighting.Setup(m_context, m_cullingRes, m_pipelineSettings.shadowSettings);
             m_commandBuffer.EndSample(SampleName);
             m_postFxPass.Setup(m_context, m_camera, m_pipelineSettings.postFxSettings);
-            m_computePass.Setup(m_context, m_camera);
+            // m_computeBlit.Setup(m_context, m_camera);
 
             Setup();
             return true;
@@ -32,8 +32,8 @@ public class ForwardRenderer : CameraRenderer
         DrawVisibleGeometry();
         DrawUnsupportedShader();
         DrawGizmosBeforeFx();
-        m_computePass.Render(s_frameBufferId);
-        // m_postFxPass.Render(s_frameBufferId);
+        // m_computeBlit.Render(s_frameBufferId);
+        m_postFxPass.Render(s_frameBufferId);
         DrawGizmosAfterFx();
     }
 

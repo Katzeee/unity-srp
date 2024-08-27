@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.Rendering;
 
-public class ComputerShaderPass
+public class ComputeBlit
 {
     private const string c_commandBufferName = "Compute Shader";
 
@@ -22,11 +22,16 @@ public class ComputerShaderPass
         m_camera = camera;
     }
 
-    public void Render(RenderTargetIdentifier src)
+    public void Render(RenderTargetIdentifier from)
     {
-        // m_camera.;
-        // m_commandBuffer.GetTemporaryRT();
+        var id = Shader.PropertyToID("rt2");
+        var id3 = Shader.PropertyToID("rt3");
 
+        m_commandBuffer.GetTemporaryRT(id, Screen.width, Screen.height, 24, FilterMode.Point,
+            RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear, 1, true);
+        // m_commandBuffer.SetT
+
+        // m_commandBuffer.GetTemporaryRT();
         var output = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32,
             RenderTextureReadWrite.Linear);
         output.filterMode = FilterMode.Point;
@@ -36,8 +41,9 @@ public class ComputerShaderPass
         // m_commandBuffer.Get
         // ComputeBuffer
 
-        m_commandBuffer.SetComputeTextureParam(computeShader, KernelIndex, "rt1", src);
-        m_commandBuffer.SetComputeTextureParam(computeShader, KernelIndex, "rt2", output);
+        m_commandBuffer.SetComputeTextureParam(computeShader, KernelIndex, "rt1", from);
+        m_commandBuffer.SetComputeTextureParam(computeShader, KernelIndex, "rt2", id3);
+        // m_commandBuffer.SetCom
 
         computeShader.SetTexture(KernelIndex, "rt2", output);
 
@@ -50,9 +56,9 @@ public class ComputerShaderPass
         m_context.ExecuteCommandBuffer(m_commandBuffer);
         m_commandBuffer.Clear();
 
+        m_commandBuffer.ReleaseTemporaryRT(id);
         // m_commandBuffer.WaitAllAsyncReadbackRequests();
         // m_camera.targetTexture = output;
-        // RenderTexture.ReleaseTemporary(output);
         return;
     }
 }
