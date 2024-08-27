@@ -34,7 +34,6 @@ public partial class PostFxPass
         ApplySceneViewState();
     }
 
-
     private void Draw(RenderTargetIdentifier from, RenderTargetIdentifier to, PassName passName)
     {
         m_commandBuffer.SetGlobalTexture(s_fxSrcId, from);
